@@ -14,8 +14,8 @@ func _boot() -> void:
 		return
 	var ferry := found as Node3D
 	var old_bridge := ferry.find_child("Bridge", false, false)
-	if old_bridge != null:
-		old_bridge.visible = false
+	if old_bridge is Node3D:
+		(old_bridge as Node3D).visible = false
 	_build_superstructure(ferry)
 
 func _build_superstructure(ferry: Node3D) -> void:

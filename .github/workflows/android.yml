@@ -11,6 +11,10 @@ jobs:
     timeout-minutes: 30
     env:
       GODOT_VERSION: 4.4.1
+      GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
+      GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+      GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,7 +28,19 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "build-tools;35.0.1" "platforms;android-35" "cmdline-tools;latest"
+          sdkmanager "platform-tools" "build-tools;35.0.1" "platforms;android-35"
+
+      - name: Create ephemeral debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          rm -f "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
+          keytool -genkeypair -v \
+            -keystore "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" \
+            -storepass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
+            -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
+            -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Boğaz Kaptanı Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -48,6 +64,14 @@ jobs:
           unzip -q Godot_v${GODOT_VERSION}-stable_export_templates.tpz -d /tmp/godot-templates
           cp -r /tmp/godot-templates/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
 
+      - name: Verify Android toolchain
+        run: |
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          test -f "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
+          java -version
+          "$ANDROID_HOME/platform-tools/adb" version
+          keytool -list -keystore "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" -storepass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER"
+
       - name: Import project and verify scripts
         run: godot --headless --editor --path . --quit
 
@@ -55,6 +79,7 @@ jobs:
         run: |
           mkdir -p build
           godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v5-debug.apk
+          test -s build/BogazKaptani-v5-debug.apk
 
       - uses: actions/upload-artifact@v4
         with:

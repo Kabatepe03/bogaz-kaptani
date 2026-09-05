@@ -8,6 +8,7 @@ config/features=PackedStringArray("4.4", "Mobile")
 
 [autoload]
 V8Realism="*res://scripts/v8_realism.gd"
+V10Visuals="*res://scripts/v10_visuals.gd"
 
 [display]
 window/size/viewport_width=1920

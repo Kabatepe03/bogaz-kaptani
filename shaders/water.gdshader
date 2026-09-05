@@ -1,69 +1,60 @@
 shader_type spatial;
-render_mode cull_back, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
+render_mode cull_back, depth_draw_opaque, specular_schlick_ggx;
 
-uniform vec3 deep_color : source_color = vec3(0.004, 0.042, 0.086);
-uniform vec3 mid_color : source_color = vec3(0.012, 0.105, 0.185);
-uniform vec3 shallow_color : source_color = vec3(0.035, 0.235, 0.310);
-uniform vec3 foam_color : source_color = vec3(0.83, 0.93, 0.96);
-uniform float wave_height = 0.92;
-uniform float speed = 0.54;
+uniform vec3 deep_color : source_color = vec3(0.006, 0.050, 0.095);
+uniform vec3 body_color : source_color = vec3(0.014, 0.130, 0.220);
+uniform vec3 surface_color : source_color = vec3(0.070, 0.300, 0.365);
+uniform vec3 foam_color : source_color = vec3(0.78, 0.86, 0.87);
+uniform float wave_height = 0.90;
+uniform float speed = 0.52;
 
-varying float crest_value;
-varying vec3 world_pos;
-
-float wave(vec2 p, vec2 dir, float freq, float amp, float t) {
-	return sin(dot(p, normalize(dir)) * freq + t * speed) * amp;
+float wave(vec2 p, vec2 dir, float freq, float amp, float phase) {
+	return sin(dot(p, normalize(dir)) * freq + phase) * amp;
 }
 
-float wave_field(vec2 p, float t) {
-	return wave(p, vec2(1.0,0.18), 0.041, 0.58, t)
-		+ wave(p, vec2(-0.30,1.0), 0.071, 0.32, t * 1.17)
-		+ wave(p, vec2(0.76,0.56), 0.137, 0.16, t * 1.54)
-		+ wave(p, vec2(-0.90,0.38), 0.212, 0.075, t * 1.91)
-		+ wave(p, vec2(0.26,-1.0), 0.315, 0.035, t * 2.28);
-}
-
-float hash21(vec2 p) {
-	p = fract(p * vec2(123.34, 345.45));
-	p += dot(p, p + 34.345);
-	return fract(p.x * p.y);
+float field(vec2 p, float t) {
+	return wave(p, vec2(1.0, 0.18), 0.040, 0.55, t * speed)
+		+ wave(p, vec2(-0.28, 1.0), 0.073, 0.31, t * speed * 1.23)
+		+ wave(p, vec2(0.72, 0.60), 0.125, 0.16, t * speed * 1.58)
+		+ wave(p, vec2(-0.83, 0.44), 0.205, 0.08, t * speed * 1.92)
+		+ wave(p, vec2(0.31, -0.95), 0.330, 0.035, t * speed * 2.25);
 }
 
 void vertex() {
 	vec2 p = VERTEX.xz;
-	float h = wave_field(p, TIME);
-	VERTEX.y += h * wave_height;
-	crest_value = h;
-	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	float broad = field(p, TIME);
+	float chop = sin((p.x * 0.17) + (p.y * 0.12) + TIME * 1.8) * 0.08;
+	VERTEX.y += (broad + chop) * wave_height;
 }
 
 void fragment() {
-	vec2 p = world_pos.xz;
+	vec2 p = VERTEX.xz;
 	float t = TIME;
-	float sx = sin((p.x + t * 6.0) * 0.083) * 0.25 + sin((p.x - t * 2.8) * 0.21) * 0.10;
-	float sz = cos((p.y - t * 4.1) * 0.106) * 0.25 + cos((p.y + t * 3.6) * 0.19) * 0.10;
-	vec3 n1 = normalize(vec3(sx, 1.0, sz));
-	vec3 n2 = normalize(vec3(
-		cos((p.y + t * 5.0) * 0.23) * 0.16,
-		1.0,
-		sin((p.x + t * 3.2) * 0.205) * 0.16));
-	NORMAL = normalize(mix(n1, n2, 0.44));
+	float sx = sin((p.x + t * 7.0) * 0.095) * 0.27 + sin((p.y - t * 4.0) * 0.185) * 0.10;
+	float sz = cos((p.y - t * 5.2) * 0.118) * 0.28 + cos((p.x + t * 3.1) * 0.215) * 0.10;
+	NORMAL = normalize(vec3(sx, 1.0, sz));
 
 	float ndv = max(dot(NORMAL, VIEW), 0.0);
-	float fresnel = pow(1.0 - ndv, 4.8);
-	float broad = sin(p.x * 0.0055 + p.y * 0.0037 + t * 0.28) * 0.5 + 0.5;
-	float current_band = sin(p.x * 0.0017 - p.y * 0.0024 + t * 0.16) * 0.5 + 0.5;
-	vec3 base = mix(deep_color, mid_color, 0.46 + broad * 0.24);
-	base = mix(base, shallow_color, current_band * 0.12 + fresnel * 0.26);
+	float fresnel = pow(1.0 - ndv, 4.7);
+	float broad = field(p, t);
+	float long_band = sin(p.x * 0.0048 + p.y * 0.0062 + t * 0.23) * 0.5 + 0.5;
+	float micro = sin((p.x + p.y) * 0.11 + t * 1.6) * 0.5 + 0.5;
 
-	float crest = smoothstep(0.72, 1.06, crest_value);
-	float broken = hash21(floor(p * 0.38 + vec2(t * 0.8, -t * 0.35)));
-	float foam = crest * smoothstep(0.30, 0.82, broken) * 0.42;
-	float sparkle_seed = hash21(floor(p * 1.65 + vec2(t * 2.0, -t * 1.4)));
-	float sparkle = smoothstep(0.965, 1.0, sparkle_seed) * pow(1.0 - abs(ndv - 0.42), 7.0) * 0.52;
+	vec3 base = mix(deep_color, body_color, 0.44 + long_band * 0.28);
+	base = mix(base, surface_color, fresnel * 0.42 + micro * 0.035);
 
-	ALBEDO = base + vec3(fresnel * 0.16) + foam_color * foam + vec3(sparkle);
-	ROUGHNESS = clamp(0.10 + fresnel * 0.20 + foam * 0.30, 0.08, 0.48);
-	METALLIC = 0.025;
-	SPECULAR = 0.96;
+	vec3 sun_dir = normalize(vec3(-0.42, 0.84, -0.34));
+	vec3 reflected = reflect(-sun_dir, NORMAL);
+	float glint = pow(max(dot(reflected, VIEW), 0.0), 72.0);
+	float soft_glint = pow(max(dot(reflected, VIEW), 0.0), 18.0) * 0.22;
+
+	float crest = smoothstep(0.72, 1.08, broad);
+	float broken = smoothstep(0.66, 0.96, broad + sin(p.x * 0.52 + p.y * 0.41 + t * 2.6) * 0.11);
+	float foam = crest * 0.42 + broken * crest * 0.28;
+
+	ALBEDO = mix(base, foam_color, clamp(foam, 0.0, 0.58));
+	ALBEDO += vec3(glint * 0.54 + soft_glint);
+	ROUGHNESS = clamp(0.14 + fresnel * 0.11 + foam * 0.36, 0.12, 0.62);
+	METALLIC = 0.035;
+	SPECULAR = 0.94;
 }

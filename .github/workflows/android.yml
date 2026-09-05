@@ -1,14 +1,14 @@
-name: Android v10 realism final APK
+name: Android v11 real assets physics APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "v10-realism-final" ]
+    branches: [ "v11-real-assets-physics" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       GODOT_VERSION: 4.4.1
       GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
@@ -22,6 +22,22 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate v11 glTF PBR assets
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy<3" "trimesh>=4.4,<5"
+          python tools/generate_v11_assets.py
+          test -s assets/v11/ferry_gestas_style_v11.glb
+          test -s assets/v11/sedan_pbr_v11.glb
+          test -s assets/v11/minibus_pbr_v11.glb
+          test -s assets/v11/bus_pbr_v11.glb
+          test -s assets/v11/truck_pbr_v11.glb
+          ls -lh assets/v11
 
       - uses: android-actions/setup-android@v3
 
@@ -40,7 +56,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı v10 Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı v11 Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -78,11 +94,11 @@ jobs:
       - name: Export APK
         run: |
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v10-realism.apk
-          test -s build/BogazKaptani-v10-realism.apk
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v11-real-assets.apk
+          test -s build/BogazKaptani-v11-real-assets.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v10-realism-final-apk
-          path: build/BogazKaptani-v10-realism.apk
+          name: BogazKaptani-v11-real-assets-physics-apk
+          path: build/BogazKaptani-v11-real-assets.apk
           if-no-files-found: error

@@ -1,9 +1,9 @@
-name: Android v5 debug APK
+name: Android v7 big test APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "v5-real-3d", "v5-real-3d-work" ]
+    branches: [ "v7-release-candidate" ]
 
 jobs:
   build:
@@ -40,7 +40,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı v7 Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -78,11 +78,11 @@ jobs:
       - name: Export APK
         run: |
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v5-debug.apk
-          test -s build/BogazKaptani-v5-debug.apk
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v7-debug.apk
+          test -s build/BogazKaptani-v7-debug.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v5-debug-apk
-          path: build/BogazKaptani-v5-debug.apk
+          name: BogazKaptani-v7-big-test-apk
+          path: build/BogazKaptani-v7-debug.apk
           if-no-files-found: error

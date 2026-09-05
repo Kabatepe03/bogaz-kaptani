@@ -17,16 +17,16 @@ static func create_ferry() -> CharacterBody3D:
 static func _curved_hull() -> MeshInstance3D:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var sections := 24
+	var sections: int = 24
 	for i in range(sections):
-		var t0 := float(i) / float(sections)
-		var t1 := float(i + 1) / float(sections)
+		var t0: float = float(i) / float(sections)
+		var t1: float = float(i + 1) / float(sections)
 		if i == sections - 1:
 			continue
-		var z0 := lerp(-31.0, 31.0, t0)
-		var z1 := lerp(-31.0, 31.0, t1)
-		var w0 := 10.8 * pow(sin(PI * t0), 0.34)
-		var w1 := 10.8 * pow(sin(PI * t1), 0.34)
+		var z0: float = lerpf(-31.0, 31.0, t0)
+		var z1: float = lerpf(-31.0, 31.0, t1)
+		var w0: float = 10.8 * float(pow(sin(PI * t0), 0.34))
+		var w1: float = 10.8 * float(pow(sin(PI * t1), 0.34))
 		_emit_side(st, z0, z1, w0, w1, 1.0)
 		_emit_side(st, z0, z1, w0, w1, -1.0)
 	st.generate_normals()

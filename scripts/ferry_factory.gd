@@ -7,8 +7,12 @@ static func create_ferry() -> CharacterBody3D:
 	root.add_child(_curved_hull())
 	root.add_child(_deck())
 	root.add_child(_bridge())
-	root.add_child(_ramp(-30.5))
-	root.add_child(_ramp(30.5))
+	var rear_ramp := _ramp(-30.5)
+	rear_ramp.name = "RampRear"
+	root.add_child(rear_ramp)
+	var front_ramp := _ramp(30.5)
+	front_ramp.name = "RampFront"
+	root.add_child(front_ramp)
 	root.add_child(_deck_details())
 	root.add_child(_rails())
 	root.add_child(_mast_and_funnel())
@@ -101,8 +105,7 @@ static func _bridge() -> Node3D:
 	return group
 
 static func _ramp(z: float) -> MeshInstance3D:
-	var ramp := _box(Vector3(15.8, 0.42, 5.0), Vector3(0, 5.08, z), Color(0.19, 0.20, 0.21), 0.90, 0.05)
-	return ramp
+	return _box(Vector3(15.8, 0.42, 5.0), Vector3(0, 5.08, z), Color(0.19, 0.20, 0.21), 0.90, 0.05)
 
 static func _deck_details() -> Node3D:
 	var group := Node3D.new()

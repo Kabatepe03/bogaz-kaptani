@@ -12,13 +12,13 @@ static func make_landmass(center: Vector3, extent: Vector2, coastal_sign: float,
 
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var n := 72
+	var n: int = 72
 	for z in range(n):
 		for x in range(n):
-			var u0 := float(x) / float(n - 1)
-			var v0 := float(z) / float(n - 1)
-			var u1 := float(x + 1) / float(n - 1)
-			var v1 := float(z + 1) / float(n - 1)
+			var u0: float = float(x) / float(n - 1)
+			var v0: float = float(z) / float(n - 1)
+			var u1: float = float(x + 1) / float(n - 1)
+			var v1: float = float(z + 1) / float(n - 1)
 			if x == n - 1 or z == n - 1:
 				continue
 			_emit_quad(st, center, extent, coastal_sign, noise, u0, v0, u1, v1)
@@ -43,11 +43,11 @@ static func _emit_quad(st: SurfaceTool, center: Vector3, extent: Vector2, sign_d
 		st.add_vertex(p)
 
 static func _point(center: Vector3, extent: Vector2, sign_dir: float, noise: FastNoiseLite, u: float, v: float) -> Vector3:
-	var lx := (u - 0.5) * extent.x
-	var lz := (v - 0.5) * extent.y
-	var coastal := clamp((sign_dir * lx + extent.x * 0.23) / (extent.x * 0.46), 0.0, 1.0)
-	var ridge := pow(coastal, 1.35) * 150.0
-	var macro := noise.get_noise_2d(center.x + lx, center.z + lz) * 48.0
-	var micro := noise.get_noise_2d((center.x + lx) * 2.7, (center.z + lz) * 2.7) * 9.0
-	var h := max(-8.0, ridge + macro + micro - 16.0)
+	var lx: float = (u - 0.5) * extent.x
+	var lz: float = (v - 0.5) * extent.y
+	var coastal: float = float(clamp((sign_dir * lx + extent.x * 0.23) / (extent.x * 0.46), 0.0, 1.0))
+	var ridge: float = float(pow(coastal, 1.35)) * 150.0
+	var macro: float = noise.get_noise_2d(center.x + lx, center.z + lz) * 48.0
+	var micro: float = noise.get_noise_2d((center.x + lx) * 2.7, (center.z + lz) * 2.7) * 9.0
+	var h: float = maxf(-8.0, ridge + macro + micro - 16.0)
 	return center + Vector3(lx, h, lz)

@@ -1,9 +1,9 @@
-name: Android v8 realism APK
+name: Android v10 realism final APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "v8-realism" ]
+    branches: [ "v10-realism-final" ]
 
 jobs:
   build:
@@ -40,7 +40,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı v8 Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı v10 Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -78,11 +78,11 @@ jobs:
       - name: Export APK
         run: |
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v8-realism.apk
-          test -s build/BogazKaptani-v8-realism.apk
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v10-realism.apk
+          test -s build/BogazKaptani-v10-realism.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v8-realism-apk
-          path: build/BogazKaptani-v8-realism.apk
+          name: BogazKaptani-v10-realism-final-apk
+          path: build/BogazKaptani-v10-realism.apk
           if-no-files-found: error

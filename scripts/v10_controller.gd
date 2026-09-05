@@ -73,3 +73,50 @@ func _next_camera() -> void:
 	camera_index = (camera_index + 1) % cameras.size()
 	cameras[camera_index].current = true
 	_update_status()
+
+func _make_building(size: Vector3, color: Color, detailed: bool) -> Node3D:
+	var group := Node3D.new()
+	group.add_child(_box_node(size, Vector3.ZERO, color, 0.86, 0.01))
+
+	var trim := color.lightened(0.12)
+	group.add_child(_box_node(Vector3(size.x + 0.30, 0.22, size.z + 0.30), Vector3(0, -size.y * 0.50 + 0.11, 0), trim.darkened(0.18), 0.82, 0.01))
+	for y_ratio in [-0.22, 0.02, 0.26]:
+		if absf(y_ratio * size.y) < size.y * 0.42:
+			group.add_child(_box_node(Vector3(size.x + 0.18, 0.13, size.z + 0.18), Vector3(0, y_ratio * size.y, 0), trim, 0.78, 0.01))
+
+	# Kiremit tonlu kırma çatı hissi için iki eğimli yüzey.
+	var roof_color := Color(0.34, 0.20, 0.14)
+	var roof_left := _box_node(Vector3(size.x * 0.56, 0.28, size.z + 1.0), Vector3(-size.x * 0.245, size.y * 0.50 + 0.55, 0), roof_color, 0.90, 0.0)
+	roof_left.rotation_degrees.z = -12.0
+	group.add_child(roof_left)
+	var roof_right := _box_node(Vector3(size.x * 0.56, 0.28, size.z + 1.0), Vector3(size.x * 0.245, size.y * 0.50 + 0.55, 0), roof_color, 0.90, 0.0)
+	roof_right.rotation_degrees.z = 12.0
+	group.add_child(roof_right)
+
+	if not detailed:
+		return group
+
+	var glass := Color(0.018, 0.055, 0.078)
+	var floors: int = maxi(2, int(round(size.y / 3.05)))
+	var cols: int = clampi(int(round(size.x / 5.2)), 2, 4)
+	for floor_index in range(floors):
+		var floor_y: float = -size.y * 0.5 + 1.65 + float(floor_index) * 3.05
+		if floor_y > size.y * 0.43:
+			continue
+		for col_index in range(cols):
+			var x_ratio: float = (float(col_index) + 0.5) / float(cols) - 0.5
+			var window_x: float = x_ratio * size.x * 0.78
+			group.add_child(_box_node(Vector3(1.55, 1.12, 0.10), Vector3(window_x, floor_y, -size.z * 0.505), glass, 0.13, 0.16))
+			group.add_child(_box_node(Vector3(1.55, 1.12, 0.10), Vector3(window_x, floor_y, size.z * 0.505), glass, 0.13, 0.16))
+		if floor_index > 0 and floor_index % 2 == 1:
+			var balcony_z: float = -size.z * 0.53
+			group.add_child(_box_node(Vector3(size.x * 0.66, 0.18, 1.20), Vector3(0, floor_y - 0.68, balcony_z), Color(0.52,0.52,0.49), 0.80, 0.02))
+			group.add_child(_box_node(Vector3(size.x * 0.66, 0.08, 0.08), Vector3(0, floor_y + 0.22, balcony_z - 0.56), Color(0.20,0.21,0.21), 0.34, 0.46))
+			for rail_x in [-0.28, 0.0, 0.28]:
+				group.add_child(_box_node(Vector3(0.06, 0.90, 0.06), Vector3(rail_x * size.x, floor_y - 0.22, balcony_z - 0.56), Color(0.20,0.21,0.21), 0.34, 0.46))
+
+	# Zemin kat vitrin/saçak detayları.
+	var shop_y: float = -size.y * 0.5 + 1.35
+	group.add_child(_box_node(Vector3(size.x * 0.64, 1.85, 0.11), Vector3(0, shop_y, -size.z * 0.507), Color(0.025,0.065,0.085), 0.14, 0.12))
+	group.add_child(_box_node(Vector3(size.x * 0.72, 0.16, 1.05), Vector3(0, shop_y + 1.18, -size.z * 0.55), Color(0.23,0.27,0.29), 0.62, 0.12))
+	return group

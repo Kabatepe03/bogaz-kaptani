@@ -21,8 +21,49 @@ func _process(delta: float) -> void:
 
 func _update_ferry(delta: float) -> void:
 	super._update_ferry(delta)
+	_apply_v22_current_correction(delta)
 	_apply_v22_twin_screw(delta)
 	_apply_v22_berth_contact(delta)
+
+func _apply_v22_current_correction(delta: float) -> void:
+	if ferry == null or delta <= 0.0:
+		return
+	# V12 used distance to one midpoint, which made current strength radially symmetric. V22 keeps
+	# the inherited value for compatibility, then replaces it with a three-segment Strait field.
+	var c_dock: Vector3 = GeoReference.to_local(GeoReference.CANAKKALE_DOCK)
+	var e_dock: Vector3 = GeoReference.to_local(GeoReference.ECEABAT_DOCK)
+	var old_mid: Vector3 = (c_dock + e_dock) * 0.5
+	var old_dist: float = ferry.global_position.distance_to(old_mid)
+	var old_factor: float = clampf(1.0 - old_dist / 3200.0, 0.28, 1.0)
+	var weather_factor: float = clampf(0.78 + current_strength * 0.55, 0.72, 1.35)
+	var old_velocity: Vector3 = Vector3(-0.10, 0.0, 0.995).normalized() * ((0.43 + 0.42 * old_factor) * weather_factor)
+
+	var north: Vector3 = GeoReference.to_local(Vector2(40.2065, 26.3515))
+	var centre: Vector3 = GeoReference.to_local(Vector2(40.1665, 26.3865))
+	var south: Vector3 = GeoReference.to_local(Vector2(40.1265, 26.4260))
+	var p: Vector3 = ferry.global_position
+	var d1: float = _distance_xz_to_segment(p, north, centre)
+	var d2: float = _distance_xz_to_segment(p, centre, south)
+	var channel_distance: float = minf(d1, d2)
+	var channel_factor: float = clampf(1.0 - channel_distance / 1150.0, 0.16, 1.0)
+	var desired_direction: Vector3 = south - north
+	desired_direction.y = 0.0
+	desired_direction = desired_direction.normalized()
+	var desired_speed: float = (0.30 + 0.58 * channel_factor) * weather_factor
+	# Near the ferry terminals the flow is softened to make berth manoeuvres controllable without
+	# removing the cross-current the player has to anticipate on approach.
+	var berth_distance: float = minf(p.distance_to(c_dock), p.distance_to(e_dock))
+	var berth_softening: float = lerpf(0.62, 1.0, clampf(berth_distance / 420.0, 0.0, 1.0))
+	var desired_velocity: Vector3 = desired_direction * desired_speed * berth_softening
+	ferry.global_position += (desired_velocity - old_velocity) * delta
+
+func _distance_xz_to_segment(p: Vector3, a: Vector3, b: Vector3) -> float:
+	var pa := Vector2(p.x - a.x, p.z - a.z)
+	var ba := Vector2(b.x - a.x, b.z - a.z)
+	var denom: float = maxf(ba.length_squared(), 0.001)
+	var t: float = clampf(pa.dot(ba) / denom, 0.0, 1.0)
+	var closest := Vector2(a.x, a.z) + ba * t
+	return Vector2(p.x, p.z).distance_to(closest)
 
 func _apply_v22_twin_screw(delta: float) -> void:
 	if ferry == null or delta <= 0.0:

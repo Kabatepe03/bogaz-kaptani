@@ -40,6 +40,7 @@ jobs:
           python tools/generate_v20_world.py
           python tools/generate_v20_world_ultra.py
           python tools/generate_v22_world_finish.py
+          python tools/generate_v23_world_visuals.py
           cp assets/v20/canakkale_eceabat_remaster_v20.glb assets/v12/canakkale_real_world_v12.glb
           python tools/fetch_v20_cc0_assets.py
           python tools/fetch_v23_cc0_models.py

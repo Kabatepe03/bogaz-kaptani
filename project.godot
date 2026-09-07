@@ -19,6 +19,7 @@ V20MarineTraffic="*res://scripts/v20_marine_traffic.gd"
 V21SceneFinish="*res://scripts/v21_scene_finish.gd"
 V22UICleanup="*res://scripts/v22_ui_cleanup.gd"
 V22CanakkaleIdentity="*res://scripts/v22_canakkale_identity.gd"
+V23WorldCollision="*res://scripts/v23_world_collision.gd"
 
 [display]
 window/size/viewport_width=1920

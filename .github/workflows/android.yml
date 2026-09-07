@@ -92,12 +92,23 @@ jobs:
           keytool -list -keystore "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" -storepass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER"
 
       - name: Import project and verify scripts
-        run: godot --headless --editor --path . --quit
+        run: |
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
+          if grep -E "SCRIPT ERROR: Parse Error|Failed to load script" /tmp/godot-import.log; then
+            echo "Godot script validation failed."
+            exit 1
+          fi
 
       - name: Export APK
         run: |
+          set -o pipefail
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v12-real-world.apk
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v12-real-world.apk 2>&1 | tee /tmp/godot-export.log
+          if grep -E "SCRIPT ERROR: Parse Error|Failed to load script" /tmp/godot-export.log; then
+            echo "Godot export contained script errors."
+            exit 1
+          fi
           test -s build/BogazKaptani-v12-real-world.apk
 
       - uses: actions/upload-artifact@v4

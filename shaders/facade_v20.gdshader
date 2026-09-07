@@ -1,8 +1,10 @@
 shader_type spatial;
 render_mode cull_back, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
 
-uniform vec3 plaster_a : source_color = vec3(0.72, 0.68, 0.59);
-uniform vec3 plaster_b : source_color = vec3(0.84, 0.79, 0.68);
+uniform vec3 plaster_a : source_color = vec3(0.83, 0.82, 0.77);
+uniform vec3 plaster_b : source_color = vec3(0.70, 0.72, 0.70);
+uniform vec3 plaster_c : source_color = vec3(0.82, 0.68, 0.58);
+uniform vec3 plaster_d : source_color = vec3(0.72, 0.79, 0.80);
 uniform vec3 glass_color : source_color = vec3(0.018, 0.055, 0.075);
 uniform vec3 roof_color : source_color = vec3(0.30, 0.17, 0.11);
 
@@ -22,9 +24,19 @@ void vertex() {
 
 void fragment() {
     vec3 n = normalize(world_nrm);
-    float seed = hash21(floor(world_pos.xz / 14.0));
-    vec3 plaster = mix(plaster_a, plaster_b, seed);
-    plaster *= 0.92 + hash21(floor(world_pos.xz / 4.0)) * 0.12;
+    float seed = hash21(floor(world_pos.xz / 13.0));
+    float seed2 = hash21(floor(world_pos.zx / 27.0) + vec2(5.2, 9.1));
+    vec3 plaster = plaster_a;
+    if (seed < 0.25) {
+        plaster = plaster_b;
+    } else if (seed < 0.52) {
+        plaster = plaster_a;
+    } else if (seed < 0.76) {
+        plaster = plaster_c;
+    } else {
+        plaster = plaster_d;
+    }
+    plaster *= 0.91 + seed2 * 0.14;
 
     if (abs(n.y) > 0.68) {
         float roof_breakup = hash21(floor(world_pos.xz * 0.22));
@@ -47,17 +59,19 @@ void fragment() {
         float ground_floor = 1.0 - smoothstep(3.0, 4.2, world_pos.y);
         vec3 shop_glass = vec3(0.025, 0.070, 0.082);
         vec3 facade = plaster;
-        facade = mix(facade, plaster * 0.55, frame_mask * 0.70);
+        facade = mix(facade, plaster * 0.56, frame_mask * 0.66);
         facade = mix(facade, glass_color * (0.72 + seed * 0.36), window_mask);
         facade = mix(facade, shop_glass, ground_floor * window_mask * 0.60);
 
-        // Subtle horizontal slab/balcony rhythm prevents large blank wall faces.
+        // Balcony/slab rhythm and subtle lower-wall weathering remove the cardboard-box look.
         float slab = 1.0 - smoothstep(0.025, 0.075, abs(fract(world_pos.y / 3.05) - 0.04));
-        facade = mix(facade, plaster * 0.68, slab * 0.34);
+        facade = mix(facade, plaster * 0.65, slab * 0.38);
+        float grime = (1.0 - smoothstep(0.4, 2.2, world_pos.y)) * (0.10 + seed2 * 0.09);
+        facade *= 1.0 - grime;
 
         ALBEDO = facade;
-        ROUGHNESS = mix(0.78, 0.18, window_mask);
+        ROUGHNESS = mix(0.79, 0.18, window_mask);
         METALLIC = window_mask * 0.08;
-        SPECULAR = mix(0.28, 0.72, window_mask);
+        SPECULAR = mix(0.26, 0.72, window_mask);
     }
 }

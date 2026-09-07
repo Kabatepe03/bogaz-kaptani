@@ -21,11 +21,12 @@ V22UICleanup="*res://scripts/v22_ui_cleanup.gd"
 V22CanakkaleIdentity="*res://scripts/v22_canakkale_identity.gd"
 V23WorldCollision="*res://scripts/v23_world_collision.gd"
 V23Waterfront="*res://scripts/v23_waterfront_digital_twin.gd"
-V23CC0Foliage="*res://scripts/v23_cc0_foliage.gd"
 V23NightLighting="*res://scripts/v23_night_lighting.gd"
 V23CityLife="*res://scripts/v23_city_life.gd"
 V23MarineCollision="*res://scripts/v23_marine_collision.gd"
 V23FerryRamps="*res://scripts/v23_ferry_ramps.gd"
+V30OSMFoliage="*res://scripts/v30_osm_foliage.gd"
+V30SceneCleanup="*res://scripts/v30_scene_cleanup.gd"
 
 [display]
 window/size/viewport_width=1920

@@ -9,6 +9,11 @@ from trimesh.visual.material import PBRMaterial
 OUT = Path("assets/v20")
 OUT.mkdir(parents=True, exist_ok=True)
 
+# Master visual proportions are corrected at export to a representative modern GESTAŞ Ro-Ro:
+# roughly 88 m overall length and 16.8 m beam. Internal modelling space stays convenient.
+MASTER_X_SCALE = 16.80 / 21.30
+MASTER_Z_SCALE = 88.0 / 82.0
+
 
 def pbr(name, rgb, metallic=0.0, rough=0.5, alpha=255, emissive=None):
     rgba = tuple(int(max(0.0, min(1.0, c)) * 255) for c in rgb) + (alpha,)
@@ -88,7 +93,6 @@ def torus(major, minor, pos, material, axis="x"):
 def hull_width(z, y):
     half_len = 41.0
     q = min(1.0, abs(z) / half_len)
-    # Ferry hull stays full for most of its length, then tightens smoothly into the double-ended bows.
     end = max(0.06, (1.0 - q ** 4.7) ** 0.30)
     flare = np.interp(y, [-5.4, -3.8, -2.0, 0.0, 2.6, 5.0], [0.20, 0.48, 0.70, 0.84, 0.96, 1.0])
     shoulder = 0.96 + 0.04 * math.cos(q * math.pi * 0.5)
@@ -103,7 +107,6 @@ def make_hull(material):
         for z in zs:
             w = hull_width(float(z), float(y))
             verts.extend([(-w, y, z), (w, y, z)])
-
     faces = []
     row = len(zs) * 2
     for iy in range(len(ys) - 1):
@@ -117,8 +120,6 @@ def make_hull(material):
             g = e + 2
             h = e + 3
             faces += [[a, e, g], [a, g, c], [b, d, h], [b, h, f]]
-
-    # Bottom and weather-deck caps.
     for level in (0, len(ys) - 1):
         base = level * row
         for iz in range(len(zs) - 1):
@@ -127,7 +128,6 @@ def make_hull(material):
             c = a + 2
             d = a + 3
             faces += ([[a, c, d], [a, d, b]] if level == 0 else [[a, d, c], [a, b, d]])
-
     m = trimesh.Trimesh(np.asarray(verts, dtype=float), np.asarray(faces, dtype=int), process=True)
     m.fix_normals()
     return apply(m, material)
@@ -156,14 +156,12 @@ def make_side_band(y0, y1, material, thickness=0.06):
 
 
 def tapered_house(z0, z1, y0, y1, widths, material):
-    # Rounded-looking longitudinal cabin/bridge made as a multi-section loft rather than a box.
     sections = 15
     zs = np.linspace(z0, z1, sections)
     verts = []
     for z in zs:
         t = (z - z0) / max(0.001, z1 - z0)
         width = np.interp(t, [0.0, 0.12, 0.5, 0.88, 1.0], widths)
-        # six points around each side create chamfered shoulders.
         verts.extend([
             (-width * 0.92, y0, z), (width * 0.92, y0, z),
             (-width, y0 + (y1-y0)*0.28, z), (width, y0 + (y1-y0)*0.28, z),
@@ -174,11 +172,8 @@ def tapered_house(z0, z1, y0, y1, widths, material):
     for i in range(sections - 1):
         a = i * ring
         b = (i + 1) * ring
-        # port and starboard skins, lower bevel, upper bevel and roof/floor strips.
-        pairs = [(0,2),(2,4),(1,3),(3,5),(4,5),(0,1)]
-        for p0, p1 in pairs:
+        for p0, p1 in [(0,2),(2,4),(1,3),(3,5),(4,5),(0,1)]:
             faces += [[a+p0, b+p0, b+p1], [a+p0, b+p1, a+p1]]
-    # End caps.
     faces += [[0,1,3],[0,3,2],[2,3,5],[2,5,4]]
     end = (sections-1)*ring
     faces += [[end+0,end+3,end+1],[end+0,end+2,end+3],[end+2,end+5,end+3],[end+2,end+4,end+5]]
@@ -196,7 +191,6 @@ def add_rail(parts, side, z0, z1, y=6.05):
 
 
 def add_windows(parts):
-    # Bridge wraparound windows: narrower toward corners and angled visually around the front/rear.
     for z in (4.65, -4.65):
         for x in np.linspace(-6.8, 6.8, 11):
             parts.append(box((1.08, 1.18, 0.10), (float(x), 13.35, z), GLASS))
@@ -204,8 +198,6 @@ def add_windows(parts):
         x = side * 8.20
         for z in (-3.2, -1.1, 1.1, 3.2):
             parts.append(box((0.10, 1.10, 1.40), (x, 13.30, z), GLASS))
-
-    # Long side passenger windows.
     for side in (-1, 1):
         x = side * 8.92
         for z in np.linspace(-18.0, 18.0, 13):
@@ -213,22 +205,17 @@ def add_windows(parts):
 
 
 def add_deck_detail(parts):
-    # Lane markings with dashed segments, matching passenger-car scale.
     for x in (-6.0, -2.0, 2.0, 6.0):
         for z in np.arange(-29.0, 30.0, 7.5):
             parts.append(box((0.10, 0.025, 4.2), (x, 5.28, float(z)), WHITE_LINE))
     for x in (-8.25, 8.25):
         parts.append(box((0.11, 0.026, 61.0), (x, 5.29, 0.0), YELLOW))
-
-    # Mooring bollards and winches.
     for side in (-1, 1):
         for z in (-27.5, -20.0, 20.0, 27.5):
             parts.append(cyl(0.30, 0.62, (side*8.65, 5.62, z), DARK_STEEL, 24, "y"))
         for z in (-23.0, 23.0):
             parts.append(cyl(0.58, 0.76, (side*7.2, 5.66, z), DARK_STEEL, 28, "x"))
             parts.append(cyl(0.28, 1.18, (side*7.2, 5.66, z), STEEL, 24, "x"))
-
-    # Fire cabinets and life-raft canisters.
     for side in (-1, 1):
         for z in (-16.0, 0.0, 16.0):
             parts.append(box((0.55, 1.05, 0.72), (side*9.15, 6.35, z), HULL_WHITE))
@@ -238,10 +225,8 @@ def add_deck_detail(parts):
 
 def add_safety(parts):
     for side in (-1, 1):
-        # Real torus life rings instead of solid orange discs.
         for z in (-17.5, 17.5):
             parts.append(torus(0.48, 0.13, (side*9.33, 8.10, z), ORANGE, "x"))
-        # Hanging tyre fenders along the working sides.
         for z in np.linspace(-24.0, 24.0, 9):
             parts.append(torus(0.53, 0.18, (side*10.47, 2.85, float(z)), RUBBER, "x"))
 
@@ -271,32 +256,31 @@ def make_ferry():
     parts = [make_hull(HULL_WHITE)]
     parts += make_side_band(-4.6, -1.25, ANTIFOUL)
     parts += make_side_band(-1.15, -0.62, NAVY)
-
-    # Weather deck and central passenger block.
     parts.append(box((19.0, 0.34, 66.0), (0.0, 5.10, 0.0), DECK))
     add_ramps(parts)
-
-    # Lower passenger salon and upper bridge are lofted/tapered to remove the Lego-box silhouette.
     parts.append(tapered_house(-20.5, 20.5, 6.05, 10.25, [8.2, 8.85, 8.85, 8.85, 8.2], HULL_WHITE))
     parts.append(tapered_house(-5.5, 5.5, 11.15, 14.75, [6.6, 8.2, 8.4, 8.2, 6.6], HULL_WHITE))
     parts.append(tapered_house(-4.7, 4.7, 14.65, 15.25, [6.1, 7.7, 7.9, 7.7, 6.1], NAVY))
     add_windows(parts)
-
-    # Twin compact exhaust trunks integrated behind the bridge.
     for x in (-3.1, 3.1):
         parts.append(cyl(0.72, 2.9, (x, 16.45, 2.1), DARK_STEEL, 32, "y"))
         parts.append(cyl(0.56, 0.44, (x, 18.08, 2.1), RUBBER, 32, "y"))
-
     for side in (-1, 1):
         add_rail(parts, side, -31.0, 31.0)
     add_deck_detail(parts)
     add_safety(parts)
     add_mast(parts)
-
-    # Small exterior warm lights under the passenger-deck overhang.
     for side in (-1, 1):
         for z in np.linspace(-15.0, 15.0, 7):
             parts.append(sphere((0.10,0.10,0.10), (side*9.2, 7.15, float(z)), WARM_LIGHT, 1))
+
+    # Correct the entire finished model rather than only the hull so every rail, window, ramp and
+    # light remains proportionally aligned. This removes the broad toy-like silhouette seen in v15.
+    master = np.eye(4)
+    master[0, 0] = MASTER_X_SCALE
+    master[2, 2] = MASTER_Z_SCALE
+    for mesh in parts:
+        mesh.apply_transform(master)
 
     scene = trimesh.Scene()
     for i, mesh in enumerate(parts):
@@ -304,7 +288,7 @@ def make_ferry():
     data = scene.export(file_type="glb")
     path = OUT / "ferry_remaster_v20.glb"
     path.write_bytes(data)
-    print(f"generated {path}: {len(data)/1024/1024:.2f} MB, parts={len(parts)}")
+    print(f"generated {path}: {len(data)/1024/1024:.2f} MB, parts={len(parts)}, target=88.0m x 16.8m")
 
 
 if __name__ == "__main__":

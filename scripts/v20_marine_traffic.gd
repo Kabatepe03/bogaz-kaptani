@@ -10,7 +10,7 @@ const FERRY := "res://assets/v20/ferry_remaster_v20.glb"
 
 var traffic_root: Node3D
 var other_ferry: Node3D
-var other_ferry_progress := 0.16
+var other_ferry_progress: float = 0.16
 
 func _ready() -> void:
 	call_deferred("_install")
@@ -47,23 +47,23 @@ func _spawn_lane(path: String, x: float, z: float, direction: float, speed: floa
 	var ship: Node = (resource as PackedScene).instantiate()
 	if not (ship is Node3D):
 		return
-	var vessel := ship as Node3D
-	var class_name := "cargo"
-	var half_length := 84.0
-	var half_beam := 13.0
+	var vessel: Node3D = ship as Node3D
+	var vessel_class: String = "cargo"
+	var half_length: float = 84.0
+	var half_beam: float = 13.0
 	if path == TANKER:
-		class_name = "tanker"
+		vessel_class = "tanker"
 		half_length = 91.0
 		half_beam = 15.0
 	elif path == TUG:
-		class_name = "tug"
+		vessel_class = "tug"
 		half_length = 17.0
 		half_beam = 6.0
 	elif path == FISHING:
-		class_name = "fishing"
+		vessel_class = "fishing"
 		half_length = 12.0
 		half_beam = 4.2
-	vessel.name = "V23_Marine_%s_%d" % [class_name.capitalize(), traffic_root.get_child_count()]
+	vessel.name = "V23_Marine_%s_%d" % [vessel_class.capitalize(), traffic_root.get_child_count()]
 	vessel.position = Vector3(x, base_y, z)
 	vessel.rotation.y = 0.0 if direction < 0.0 else PI
 	vessel.set_meta("lane_x", x)
@@ -71,7 +71,7 @@ func _spawn_lane(path: String, x: float, z: float, direction: float, speed: floa
 	vessel.set_meta("lane_speed", speed)
 	vessel.set_meta("base_y", base_y)
 	vessel.set_meta("bob_phase", phase)
-	vessel.set_meta("v23_vessel_class", class_name)
+	vessel.set_meta("v23_vessel_class", vessel_class)
 	vessel.set_meta("v23_half_length", half_length)
 	vessel.set_meta("v23_half_beam", half_beam)
 	traffic_root.add_child(vessel)
@@ -100,7 +100,7 @@ func _process(delta: float) -> void:
 		for child: Node in traffic_root.get_children():
 			if not (child is Node3D):
 				continue
-			var vessel := child as Node3D
+			var vessel: Node3D = child as Node3D
 			var direction: float = float(vessel.get_meta("lane_direction", -1.0))
 			var speed: float = float(vessel.get_meta("lane_speed", 3.0))
 			var base_y: float = float(vessel.get_meta("base_y", 1.0))

@@ -1,9 +1,9 @@
-name: Android v14 visual cleanup APK
+name: Android v15 graphics leap APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "v14-visual-cleanup" ]
+    branches: [ "v15-graphics-leap" ]
 
 jobs:
   build:
@@ -27,20 +27,21 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Generate glTF PBR ship vehicles and smoothed Çanakkale world
+      - name: Generate realistic ferry, vehicles and Çanakkale world
         run: |
           python -m pip install --upgrade pip
           pip install "numpy<3" "scipy>=1.14,<2" "trimesh>=4.4,<5" "pillow>=10,<12" "shapely>=2,<3" "mapbox-earcut>=1,<2"
           python tools/generate_v11_assets.py
           python tools/generate_v14_world.py
-          test -s assets/v11/ferry_gestas_style_v11.glb
+          python tools/generate_v15_assets.py
           test -s assets/v11/sedan_pbr_v11.glb
           test -s assets/v11/minibus_pbr_v11.glb
           test -s assets/v11/bus_pbr_v11.glb
           test -s assets/v11/truck_pbr_v11.glb
           test -s assets/v12/canakkale_real_world_v12.glb
           test -s assets/v12/ATTRIBUTION.txt
-          ls -lh assets/v11 assets/v12
+          test -s assets/v15/ferry_realistic_v15.glb
+          ls -lh assets/v11 assets/v12 assets/v15
 
       - uses: android-actions/setup-android@v3
 
@@ -59,7 +60,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı v14 Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı v15 Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -104,15 +105,15 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v14-visual-cleanup.apk 2>&1 | tee /tmp/godot-export.log
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v15-graphics-leap.apk 2>&1 | tee /tmp/godot-export.log
           if grep -E "SCRIPT ERROR: Parse Error|Failed to load script" /tmp/godot-export.log; then
             echo "Godot export contained script errors."
             exit 1
           fi
-          test -s build/BogazKaptani-v14-visual-cleanup.apk
+          test -s build/BogazKaptani-v15-graphics-leap.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v14-visual-cleanup-apk
-          path: build/BogazKaptani-v14-visual-cleanup.apk
+          name: BogazKaptani-v15-graphics-leap-apk
+          path: build/BogazKaptani-v15-graphics-leap.apk
           if-no-files-found: error

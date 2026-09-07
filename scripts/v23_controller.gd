@@ -2,6 +2,7 @@ extends "res://scripts/v22_controller.gd"
 
 const GeoReferenceV23 = preload("res://scripts/geo_reference.gd")
 const V23WaterShader: Shader = preload("res://shaders/water_v23.gdshader")
+const V23SkyShader: Shader = preload("res://shaders/sky_v23.gdshader")
 
 const CHANNEL_LL: Array[Vector2] = [
 	Vector2(40.2140, 26.4380),
@@ -12,6 +13,8 @@ const CHANNEL_LL: Array[Vector2] = [
 ]
 
 var v23_timer := 0.0
+var v23_sky_material: ShaderMaterial
+var v23_sky: Sky
 
 func _ready() -> void:
 	super._ready()
@@ -45,6 +48,8 @@ func _install_v23() -> void:
 		v20_water_material.shader = V23WaterShader
 		v20_water_material.set_shader_parameter("sea_state", clampf(0.46 + wind_strength * 0.085, 0.46, 0.92))
 		v20_water_material.set_shader_parameter("wave_height", clampf(0.58 + wind_strength * 0.065, 0.58, 0.94))
+	_ensure_v21_environment()
+	_update_v23_atmosphere_for_weather()
 	_retitle_v23(self)
 	_validate_v23_spawn()
 
@@ -101,6 +106,82 @@ func _apply_weather() -> void:
 	if v20_water_material != null:
 		v20_water_material.set_shader_parameter("sea_state", clampf(0.46 + wind_strength * 0.085, 0.46, 0.92))
 		v20_water_material.set_shader_parameter("wave_height", clampf(0.58 + wind_strength * 0.065, 0.58, 0.94))
+	_update_v23_atmosphere_for_weather()
+
+func _ensure_v21_environment() -> void:
+	if v23_sky_material == null:
+		v23_sky_material = ShaderMaterial.new()
+		v23_sky_material.shader = V23SkyShader
+		v23_sky = Sky.new()
+		v23_sky.sky_material = v23_sky_material
+	for node: Node in find_children("*", "WorldEnvironment", true, false):
+		if not (node is WorldEnvironment):
+			continue
+		var world := node as WorldEnvironment
+		var env: Environment = world.environment
+		if env == null:
+			continue
+		env.sky = v23_sky
+		env.background_mode = Environment.BG_SKY
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+		env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+		env.ambient_light_energy = 0.76
+		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		env.tonemap_exposure = 0.98
+		env.tonemap_white = 1.38
+		env.adjustment_enabled = true
+		env.adjustment_brightness = 0.99
+		env.adjustment_contrast = 1.08
+		env.adjustment_saturation = 1.02
+		env.fog_enabled = true
+		env.fog_density = 0.00010
+		env.fog_light_color = Color(0.68, 0.73, 0.73)
+		env.fog_sky_affect = 0.58
+		env.glow_enabled = true
+		env.glow_intensity = 0.10
+		env.glow_bloom = 0.004
+
+func _update_v23_atmosphere_for_weather() -> void:
+	if v23_sky_material == null:
+		return
+	match weather_index:
+		0: # clear
+			v23_sky_material.set_shader_parameter("cloud_amount", 0.30)
+			v23_sky_material.set_shader_parameter("haze_amount", 0.38)
+			v23_sky_material.set_shader_parameter("sun_elevation", 0.78)
+			v23_sky_material.set_shader_parameter("zenith_color", Vector3(0.105, 0.285, 0.520))
+			v23_sky_material.set_shader_parameter("mid_sky_color", Vector3(0.275, 0.505, 0.690))
+			v23_sky_material.set_shader_parameter("horizon_color", Vector3(0.690, 0.755, 0.775))
+		1: # windy
+			v23_sky_material.set_shader_parameter("cloud_amount", 0.58)
+			v23_sky_material.set_shader_parameter("haze_amount", 0.47)
+			v23_sky_material.set_shader_parameter("sun_elevation", 0.67)
+		2: # fog
+			v23_sky_material.set_shader_parameter("cloud_amount", 0.76)
+			v23_sky_material.set_shader_parameter("haze_amount", 0.92)
+			v23_sky_material.set_shader_parameter("sun_elevation", 0.48)
+			v23_sky_material.set_shader_parameter("zenith_color", Vector3(0.30, 0.39, 0.44))
+			v23_sky_material.set_shader_parameter("mid_sky_color", Vector3(0.47, 0.54, 0.56))
+			v23_sky_material.set_shader_parameter("horizon_color", Vector3(0.67, 0.69, 0.67))
+		3: # night
+			v23_sky_material.set_shader_parameter("cloud_amount", 0.34)
+			v23_sky_material.set_shader_parameter("haze_amount", 0.42)
+			v23_sky_material.set_shader_parameter("sun_elevation", 0.03)
+			v23_sky_material.set_shader_parameter("zenith_color", Vector3(0.006, 0.018, 0.050))
+			v23_sky_material.set_shader_parameter("mid_sky_color", Vector3(0.016, 0.040, 0.090))
+			v23_sky_material.set_shader_parameter("horizon_color", Vector3(0.055, 0.075, 0.105))
+	for node: Node in find_children("*", "WorldEnvironment", true, false):
+		if node is WorldEnvironment:
+			var env: Environment = (node as WorldEnvironment).environment
+			if env != null:
+				if weather_index == 2:
+					env.fog_density = 0.00115
+				elif weather_index == 3:
+					env.fog_density = 0.00016
+					env.ambient_light_energy = 0.22
+				else:
+					env.fog_density = 0.00010 + wind_strength * 0.000008
+					env.ambient_light_energy = 0.76
 
 func _update_v13_assist() -> void:
 	super._update_v13_assist()

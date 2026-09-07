@@ -11,7 +11,6 @@ func _ready() -> void:
 	call_deferred("_install")
 
 func _install() -> void:
-	# Wait until the DEM collision is available so every imported tree is planted on real terrain.
 	for _frame: int in range(72):
 		await get_tree().process_frame
 	if not FileAccess.file_exists(MANIFEST):
@@ -33,11 +32,11 @@ func _install() -> void:
 	var small: PackedScene = _load_scene_from_manifest(models, "tree_small_02")
 	var coastal: PackedScene = _load_scene_from_manifest(models, "island_tree_03")
 	if pine != null:
-		_scatter_eceabat_hills(pine, 185)
+		_scatter_eceabat_hills(pine, 320)
 	if coastal != null:
-		_scatter_eceabat_coast(coastal, 72)
+		_scatter_eceabat_coast(coastal, 120)
 	if small != null:
-		_scatter_canakkale_green(small, 82)
+		_scatter_canakkale_green(small, 110)
 
 func _load_scene_from_manifest(models: Dictionary, key: String) -> PackedScene:
 	var path: String = str(models.get(key, ""))
@@ -61,16 +60,16 @@ func _scatter_eceabat_hills(model: PackedScene, count: int) -> void:
 	var attempts := 0
 	while planted < count and attempts < count * 9:
 		attempts += 1
-		var inland_distance := rng.randf_range(140.0, 1700.0)
-		var side_distance := rng.randf_range(-1250.0, 1250.0)
+		var inland_distance := rng.randf_range(120.0, 1720.0)
+		var side_distance := rng.randf_range(-1320.0, 1320.0)
 		var p := center + inland * inland_distance + lateral * side_distance
 		var ground := _ground_point(p.x, p.z)
 		if ground == null:
 			continue
 		var gp: Vector3 = ground
-		if gp.y < 2.0 or gp.y > 220.0:
+		if gp.y < 2.0 or gp.y > 225.0:
 			continue
-		_spawn_model(model, gp, rng.randf_range(0.72, 1.22), rng.randf_range(0.0, TAU), 2700.0)
+		_spawn_model(model, gp, rng.randf_range(0.72, 1.28), rng.randf_range(0.0, TAU), 2850.0)
 		planted += 1
 
 func _scatter_eceabat_coast(model: PackedScene, count: int) -> void:
@@ -84,14 +83,14 @@ func _scatter_eceabat_coast(model: PackedScene, count: int) -> void:
 	var attempts := 0
 	while planted < count and attempts < count * 10:
 		attempts += 1
-		var p := center + inland * rng.randf_range(55.0, 620.0) + lateral * rng.randf_range(-930.0, 930.0)
+		var p := center + inland * rng.randf_range(48.0, 680.0) + lateral * rng.randf_range(-1020.0, 1020.0)
 		var ground := _ground_point(p.x, p.z)
 		if ground == null:
 			continue
 		var gp: Vector3 = ground
-		if gp.y < 1.0 or gp.y > 85.0:
+		if gp.y < 1.0 or gp.y > 90.0:
 			continue
-		_spawn_model(model, gp, rng.randf_range(0.65, 1.08), rng.randf_range(0.0, TAU), 1900.0)
+		_spawn_model(model, gp, rng.randf_range(0.65, 1.12), rng.randf_range(0.0, TAU), 2050.0)
 		planted += 1
 
 func _scatter_canakkale_green(model: PackedScene, count: int) -> void:
@@ -100,16 +99,14 @@ func _scatter_canakkale_green(model: PackedScene, count: int) -> void:
 	var attempts := 0
 	while planted < count and attempts < count * 12:
 		attempts += 1
-		# Keep dense trees out of the water-facing promenade itself; place them behind Kordon and in
-		# peri-urban pockets visible from the ferry.
-		var p := center + Vector3(rng.randf_range(80.0, 1250.0), 0.0, rng.randf_range(-1200.0, 900.0))
+		var p := center + Vector3(rng.randf_range(72.0, 1320.0), 0.0, rng.randf_range(-1280.0, 980.0))
 		var ground := _ground_point(p.x, p.z)
 		if ground == null:
 			continue
 		var gp: Vector3 = ground
-		if gp.y < 1.0 or gp.y > 120.0:
+		if gp.y < 1.0 or gp.y > 125.0:
 			continue
-		_spawn_model(model, gp, rng.randf_range(0.70, 1.25), rng.randf_range(0.0, TAU), 1700.0)
+		_spawn_model(model, gp, rng.randf_range(0.70, 1.30), rng.randf_range(0.0, TAU), 1850.0)
 		planted += 1
 
 func _ground_point(x: float, z: float):
@@ -140,7 +137,7 @@ func _tune_visuals(node: Node, visibility_end: float) -> void:
 	if node is GeometryInstance3D:
 		var geometry := node as GeometryInstance3D
 		geometry.visibility_range_end = visibility_end
-		geometry.visibility_range_end_margin = 160.0
+		geometry.visibility_range_end_margin = 180.0
 		geometry.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for child: Node in node.get_children():
 		_tune_visuals(child, visibility_end)

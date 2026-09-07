@@ -36,9 +36,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euxo pipefail
-          gh release delete v30-ultra-realism-test --yes --cleanup-tag || true
+          gh release delete v30-ultra-realism-test --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
           gh release create v30-ultra-realism-test \
             release/BogazKaptani-v30-ultra-realism.apk \
+            --repo "$GITHUB_REPOSITORY" \
             --target ee13f065959355a5ca1e3715fb95767960950950 \
             --prerelease \
             --title "Boğaz Kaptanı V30 Ultra Realism Test" \

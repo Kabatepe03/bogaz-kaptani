@@ -4,25 +4,49 @@ const V20_MASTER_WORLD_PATH := "res://assets/v20/canakkale_eceabat_remaster_v20.
 const V20_HALF_WATERLINE_LENGTH := 37.0
 const V20_HALF_BEAM := 8.4
 
+var v20_near_sea: MeshInstance3D
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	if v20_near_sea != null and ferry != null:
+		v20_near_sea.global_position = Vector3(ferry.global_position.x, 0.045, ferry.global_position.z)
+
 func _build_world() -> void:
 	var real_world_resource: Resource = load(V20_MASTER_WORLD_PATH)
 	if not (real_world_resource is PackedScene):
 		super._build_world()
 		return
 
-	var water := MeshInstance3D.new()
-	water.name = "V20Sea"
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(17000.0, 17000.0)
-	plane.subdivide_width = 320
-	plane.subdivide_depth = 320
-	water.mesh = plane
+	# Far field gives the full Dardanelles horizon without spending hundreds of thousands of
+	# vertices where the captain cannot resolve them.
+	var far_water := MeshInstance3D.new()
+	far_water.name = "V20SeaFar"
+	var far_plane := PlaneMesh.new()
+	far_plane.size = Vector2(17000.0, 17000.0)
+	far_plane.subdivide_width = 180
+	far_plane.subdivide_depth = 180
+	far_water.mesh = far_plane
 	v20_water_material = ShaderMaterial.new()
 	v20_water_material.shader = V20WaterShader
-	water.material_override = v20_water_material
-	water.position.y = 0.0
-	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(water)
+	far_water.material_override = v20_water_material
+	far_water.position.y = -0.055
+	far_water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(far_water)
+
+	# Dense local patch follows the ferry. World-space shader coordinates keep the wave pattern
+	# anchored to the Strait while the mesh itself moves under the camera. ~6 m vertex spacing
+	# lets broad swells actually deform the surface instead of looking like a scrolling carpet.
+	v20_near_sea = MeshInstance3D.new()
+	v20_near_sea.name = "V20SeaNearHighRes"
+	var near_plane := PlaneMesh.new()
+	near_plane.size = Vector2(1800.0, 1800.0)
+	near_plane.subdivide_width = 300
+	near_plane.subdivide_depth = 300
+	v20_near_sea.mesh = near_plane
+	v20_near_sea.material_override = v20_water_material
+	v20_near_sea.position.y = 0.045
+	v20_near_sea.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(v20_near_sea)
 
 	var real_world: Node = (real_world_resource as PackedScene).instantiate()
 	real_world.name = "V20_REAL_CANAKKALE_WORLD"
@@ -33,6 +57,11 @@ func _build_world() -> void:
 	_build_v20_terminal(canakkale, eceabat, "ÇANAKKALE FERİBOT TERMİNALİ")
 	_build_v20_terminal(eceabat, canakkale, "ECEABAT FERİBOT TERMİNALİ")
 	_build_dur_yolcu(GeoReference.to_local(GeoReference.DUR_YOLCU))
+
+func _update_v13_assist() -> void:
+	super._update_v13_assist()
+	if captain_assist_label != null:
+		captain_assist_label.text = captain_assist_label.text.replace("V13 KAPTAN ASİSTANI", "V20 KAPTAN KÖPRÜSÜ")
 
 func _apply_v20_wave_buoyancy(delta: float) -> void:
 	if ferry == null or delta <= 0.0:

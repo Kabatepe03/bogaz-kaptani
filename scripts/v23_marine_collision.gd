@@ -6,12 +6,12 @@ const FERRY_HALF_BEAM := 7.8
 var controller: Node
 var ferry: Node3D
 var vessels: Array[Node3D] = []
-var last_safe_position := Vector3.ZERO
-var last_safe_rotation := Vector3.ZERO
-var have_safe_pose := false
-var cooldown := 0.0
-var refresh_timer := 0.0
-var warning_timer := 0.0
+var last_safe_position: Vector3 = Vector3.ZERO
+var last_safe_rotation: Vector3 = Vector3.ZERO
+var have_safe_pose: bool = false
+var cooldown: float = 0.0
+var refresh_timer: float = 0.0
+var warning_timer: float = 0.0
 var warning_label: Label
 
 func _ready() -> void:
@@ -96,9 +96,9 @@ func _resolve_collision(vessel: Node3D) -> void:
 		return
 	cooldown = 0.72
 	warning_timer = 2.8
-	var class_name: String = str(vessel.get_meta("v23_vessel_class", "gemi")).to_upper()
+	var vessel_class: String = str(vessel.get_meta("v23_vessel_class", "gemi")).to_upper()
 	if warning_label != null:
-		warning_label.text = "⚠ GEMİ ÇARPIŞMASI • %s" % class_name
+		warning_label.text = "⚠ GEMİ ÇARPIŞMASI • %s" % vessel_class
 
 	var impact_knots: float = absf(float(controller.get("ground_speed_kn")))
 	if have_safe_pose:
@@ -119,7 +119,7 @@ func _resolve_collision(vessel: Node3D) -> void:
 	controller.set("comfort", maxf(0.0, float(controller.get("comfort")) - minf(42.0, 8.0 + impact_knots * 3.0)))
 
 func _install_ui() -> void:
-	var layer := CanvasLayer.new()
+	var layer: CanvasLayer = CanvasLayer.new()
 	layer.layer = 92
 	add_child(layer)
 	warning_label = Label.new()

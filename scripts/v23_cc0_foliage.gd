@@ -32,11 +32,11 @@ func _install() -> void:
 	var small: PackedScene = _load_scene_from_manifest(models, "tree_small_02")
 	var coastal: PackedScene = _load_scene_from_manifest(models, "island_tree_03")
 	if pine != null:
-		_scatter_eceabat_hills(pine, 320)
+		await _scatter_eceabat_hills(pine, 320)
 	if coastal != null:
-		_scatter_eceabat_coast(coastal, 120)
+		await _scatter_eceabat_coast(coastal, 120)
 	if small != null:
-		_scatter_canakkale_green(small, 110)
+		await _scatter_canakkale_green(small, 110)
 
 func _load_scene_from_manifest(models: Dictionary, key: String) -> PackedScene:
 	var path: String = str(models.get(key, ""))
@@ -71,6 +71,8 @@ func _scatter_eceabat_hills(model: PackedScene, count: int) -> void:
 			continue
 		_spawn_model(model, gp, rng.randf_range(0.72, 1.28), rng.randf_range(0.0, TAU), 2850.0)
 		planted += 1
+		if planted % 18 == 0:
+			await get_tree().process_frame
 
 func _scatter_eceabat_coast(model: PackedScene, count: int) -> void:
 	var center := GeoReference.to_local(GeoReference.ECEABAT_DOCK)
@@ -92,6 +94,8 @@ func _scatter_eceabat_coast(model: PackedScene, count: int) -> void:
 			continue
 		_spawn_model(model, gp, rng.randf_range(0.65, 1.12), rng.randf_range(0.0, TAU), 2050.0)
 		planted += 1
+		if planted % 16 == 0:
+			await get_tree().process_frame
 
 func _scatter_canakkale_green(model: PackedScene, count: int) -> void:
 	var center := GeoReference.to_local(Vector2(40.1520, 26.4055))
@@ -108,6 +112,8 @@ func _scatter_canakkale_green(model: PackedScene, count: int) -> void:
 			continue
 		_spawn_model(model, gp, rng.randf_range(0.70, 1.30), rng.randf_range(0.0, TAU), 1850.0)
 		planted += 1
+		if planted % 16 == 0:
+			await get_tree().process_frame
 
 func _ground_point(x: float, z: float):
 	if get_viewport().world_3d == null:

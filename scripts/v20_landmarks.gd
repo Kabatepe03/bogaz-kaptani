@@ -10,14 +10,14 @@ func _ready() -> void:
 func _install_when_world_ready() -> void:
 	for _frame: int in range(20):
 		await get_tree().process_frame
-		var scene: Node = get_tree().current_scene
-		if scene != null and scene.find_child("V20_REAL_CANAKKALE_WORLD", true, false) != null:
-			_install(scene)
+		var current_scene: Node = get_tree().current_scene
+		if current_scene != null and current_scene.find_child("V20_REAL_CANAKKALE_WORLD", true, false) != null:
+			_install(current_scene)
 			return
 	await get_tree().create_timer(0.8).timeout
-	var scene: Node = get_tree().current_scene
-	if scene != null:
-		_install(scene)
+	var fallback_scene: Node = get_tree().current_scene
+	if fallback_scene != null:
+		_install(fallback_scene)
 
 func _install(scene: Node) -> void:
 	if _installed:
@@ -99,15 +99,12 @@ func _build_cimenlik(scene: Node) -> void:
 	scene.add_child(root)
 	var stone: StandardMaterial3D = _mat(Color(0.46, 0.40, 0.31), 0.96, 0.0)
 	var dark_stone: StandardMaterial3D = _mat(Color(0.34, 0.30, 0.24), 0.98, 0.0)
-
 	root.add_child(_box(Vector3(52.0, 8.0, 5.5), Vector3(0.0, 4.0, -22.0), stone))
 	root.add_child(_box(Vector3(52.0, 8.0, 5.5), Vector3(0.0, 4.0, 22.0), stone))
 	root.add_child(_box(Vector3(5.5, 8.0, 44.0), Vector3(-23.5, 4.0, 0.0), stone))
 	root.add_child(_box(Vector3(5.5, 8.0, 44.0), Vector3(23.5, 4.0, 0.0), stone))
-
 	for corner: Vector3 in [Vector3(-23.0, 5.0, -22.0), Vector3(23.0, 5.0, -22.0), Vector3(-23.0, 5.0, 22.0), Vector3(23.0, 5.0, 22.0)]:
 		root.add_child(_cylinder(6.2, 10.0, corner, stone, 28))
-
 	root.add_child(_cylinder(8.8, 17.0, Vector3(0.0, 8.5, 0.0), dark_stone, 34))
 	root.add_child(_box(Vector3(19.0, 15.0, 16.0), Vector3(0.0, 7.5, 0.0), stone))
 	for x: float in [-7.0, 0.0, 7.0]:
@@ -120,7 +117,6 @@ func _build_kilitbahir(scene: Node) -> void:
 	scene.add_child(root)
 	var stone: StandardMaterial3D = _mat(Color(0.43, 0.37, 0.29), 0.97, 0.0)
 	var shadow_stone: StandardMaterial3D = _mat(Color(0.30, 0.27, 0.23), 0.99, 0.0)
-
 	root.add_child(_cylinder(8.6, 24.0, Vector3(0.0, 12.0, 0.0), stone, 32))
 	for p: Vector3 in [Vector3(-12.0, 7.0, 1.0), Vector3(12.0, 7.0, 1.0), Vector3(0.0, 7.0, -12.0)]:
 		root.add_child(_cylinder(5.8, 14.0, p, stone, 26))
@@ -129,6 +125,9 @@ func _build_kilitbahir(scene: Node) -> void:
 	root.add_child(_box(Vector3(4.5, 7.0, 24.0), Vector3(7.5, 4.0, 0.0), shadow_stone))
 
 func _build_dur_yolcu(scene: Node) -> void:
+	var old_label: Node = scene.find_child("Dur Yolcu", true, false)
+	if old_label is VisualInstance3D:
+		(old_label as VisualInstance3D).visible = false
 	var label := Label3D.new()
 	label.name = "V20_Dur_Yolcu"
 	label.text = "DUR YOLCU"
@@ -144,9 +143,9 @@ func _build_terminal_identity(scene: Node, dock: Vector2, opposite: Vector2, tit
 	var root := Node3D.new()
 	root.name = "V20_%s_Identity" % title
 	root.position = GeoReference.to_local(dock) + Vector3(0.0, 2.2, 0.0)
+	scene.add_child(root)
 	var target: Vector3 = GeoReference.to_local(opposite)
 	root.look_at(target, Vector3.UP)
-	scene.add_child(root)
 
 	var yellow: StandardMaterial3D = _mat(Color(0.93, 0.69, 0.04), 0.62, 0.08)
 	var blue: StandardMaterial3D = _mat(Color(0.025, 0.17, 0.34), 0.42, 0.18)

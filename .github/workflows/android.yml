@@ -33,19 +33,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install "numpy<3" "scipy>=1.14,<2" "trimesh>=4.4,<5" "pillow>=10,<12" "shapely>=2,<3" "mapbox-earcut>=1,<2" "networkx>=3,<4"
           python tools/generate_v11_assets.py
-          python tools/generate_v14_world.py
           python tools/generate_v15_assets.py
           python tools/generate_v20_assets.py
           python tools/generate_v20_vehicles.py
+          python tools/generate_v20_world.py
+          # Keep the current controller resource path stable while v20 is developed.
+          cp assets/v20/canakkale_eceabat_remaster_v20.glb assets/v12/canakkale_real_world_v12.glb
           python tools/fetch_v20_cc0_assets.py
           test -s assets/v20/ferry_remaster_v20.glb
           test -s assets/v20/vehicles/sedan_remaster_v20.glb
           test -s assets/v20/vehicles/minibus_remaster_v20.glb
           test -s assets/v20/vehicles/bus_remaster_v20.glb
           test -s assets/v20/vehicles/truck_remaster_v20.glb
+          test -s assets/v20/canakkale_eceabat_remaster_v20.glb
           test -s assets/v20/materials/asphalt_diff.png
           test -s assets/v20/materials/concrete_diff.png
           test -s assets/v20/materials/ramp_metal_diff.png
+          test -s assets/v20/terrain/dry_grass_diff.png
+          test -s assets/v20/terrain/dirt_diff.png
+          test -s assets/v20/terrain/rock_diff.png
           test -s assets/v20/lighting/harbour_day_2k.hdr
           test -s assets/v12/canakkale_real_world_v12.glb
           find assets/v20 -maxdepth 3 -type f -printf '%p %k KB\n' | sort

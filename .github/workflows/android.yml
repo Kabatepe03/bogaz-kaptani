@@ -35,6 +35,7 @@ jobs:
           python tools/generate_v20_assets.py
           python tools/generate_v20_ferry_ultra.py
           python tools/generate_v22_ferry.py
+          python tools/generate_v23_ferry.py
           python tools/generate_v20_vehicles.py
           python tools/generate_v20_marine_assets.py
           python tools/generate_v20_world.py
@@ -46,10 +47,16 @@ jobs:
           python tools/fetch_v23_cc0_models.py
           python - <<'PY'
           import json
+          import trimesh
           with open('assets/v23/vegetation/MANIFEST.json', encoding='utf-8') as f:
               data = json.load(f)
           assert len(data.get('models', {})) >= 1, data
+          scene = trimesh.load('assets/v20/ferry_remaster_v20.glb', force='scene', process=False)
+          nodes = set(scene.graph.nodes)
+          assert 'V23_RampFrontVisual' in nodes, sorted(nodes)[:30]
+          assert 'V23_RampRearVisual' in nodes, sorted(nodes)[:30]
           print('CC0 vegetation models:', data.get('models', {}))
+          print('V23 hinged ramps verified')
           PY
           test -s assets/v20/ferry_remaster_v20.glb
           test -s assets/v20/vehicles/sedan_remaster_v20.glb

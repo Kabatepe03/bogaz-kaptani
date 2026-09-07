@@ -1,7 +1,38 @@
 extends "res://scripts/v20_remaster_controller.gd"
 
+const V20_MASTER_WORLD_PATH := "res://assets/v20/canakkale_eceabat_remaster_v20.glb"
 const V20_HALF_WATERLINE_LENGTH := 37.0
 const V20_HALF_BEAM := 8.4
+
+func _build_world() -> void:
+	var real_world_resource: Resource = load(V20_MASTER_WORLD_PATH)
+	if not (real_world_resource is PackedScene):
+		super._build_world()
+		return
+
+	var water := MeshInstance3D.new()
+	water.name = "V20Sea"
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(17000.0, 17000.0)
+	plane.subdivide_width = 320
+	plane.subdivide_depth = 320
+	water.mesh = plane
+	v20_water_material = ShaderMaterial.new()
+	v20_water_material.shader = V20WaterShader
+	water.material_override = v20_water_material
+	water.position.y = 0.0
+	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(water)
+
+	var real_world: Node = (real_world_resource as PackedScene).instantiate()
+	real_world.name = "V20_REAL_CANAKKALE_WORLD"
+	add_child(real_world)
+
+	var canakkale := GeoReference.to_local(GeoReference.CANAKKALE_DOCK)
+	var eceabat := GeoReference.to_local(GeoReference.ECEABAT_DOCK)
+	_build_v20_terminal(canakkale, eceabat, "ÇANAKKALE FERİBOT TERMİNALİ")
+	_build_v20_terminal(eceabat, canakkale, "ECEABAT FERİBOT TERMİNALİ")
+	_build_dur_yolcu(GeoReference.to_local(GeoReference.DUR_YOLCU))
 
 func _apply_v20_wave_buoyancy(delta: float) -> void:
 	if ferry == null or delta <= 0.0:

@@ -22,6 +22,7 @@ V22CanakkaleIdentity="*res://scripts/v22_canakkale_identity.gd"
 V23WorldCollision="*res://scripts/v23_world_collision.gd"
 V23Waterfront="*res://scripts/v23_waterfront_digital_twin.gd"
 V23CC0Foliage="*res://scripts/v23_cc0_foliage.gd"
+V23NightLighting="*res://scripts/v23_night_lighting.gd"
 
 [display]
 window/size/viewport_width=1920

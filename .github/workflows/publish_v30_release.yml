@@ -1,0 +1,45 @@
+name: Publish V30 large APK release
+
+on:
+  push:
+    branches:
+      - v30-ultra-realism
+    paths:
+      - .github/workflows/publish_v30_release.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download validated V30 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          mkdir -p release
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${GITHUB_REPOSITORY}/actions/artifacts/10030981915/zip \
+            > /tmp/v30-artifact.zip
+          unzip -q /tmp/v30-artifact.zip -d release
+          test -s release/BogazKaptani-v30-ultra-realism.apk
+          sha256sum release/BogazKaptani-v30-ultra-realism.apk
+          ls -lh release/BogazKaptani-v30-ultra-realism.apk
+
+      - name: Publish V30 test release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          gh release delete v30-ultra-realism-test --yes --cleanup-tag || true
+          gh release create v30-ultra-realism-test \
+            release/BogazKaptani-v30-ultra-realism.apk \
+            --target ee13f065959355a5ca1e3715fb95767960950950 \
+            --prerelease \
+            --title "Boğaz Kaptanı V30 Ultra Realism Test" \
+            --notes "V30 Android test APK. Validated Godot 4.4.1 arm64 debug build from commit ee13f065959355a5ca1e3715fb95767960950950. APK SHA256: bcc714b0bc8efbcf8134b33ffe352b5366544a8cfc2255a672aec641487257e0"

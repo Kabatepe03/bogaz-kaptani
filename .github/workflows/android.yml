@@ -2,6 +2,9 @@ name: Android v23 digital twin APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - v23-digital-twin
 
 jobs:
   build:
@@ -44,6 +47,13 @@ jobs:
           cp assets/v20/canakkale_eceabat_remaster_v20.glb assets/v12/canakkale_real_world_v12.glb
           python tools/fetch_v20_cc0_assets.py
           python tools/fetch_v23_cc0_models.py
+          python - <<'PY'
+          import json
+          with open('assets/v23/vegetation/MANIFEST.json', encoding='utf-8') as f:
+              data = json.load(f)
+          assert len(data.get('models', {})) >= 1, data
+          print('CC0 vegetation models:', data.get('models', {}))
+          PY
           test -s assets/v20/ferry_remaster_v20.glb
           test -s assets/v20/vehicles/sedan_remaster_v20.glb
           test -s assets/v20/vehicles/minibus_remaster_v20.glb

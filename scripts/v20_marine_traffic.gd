@@ -29,7 +29,6 @@ func _install() -> void:
 	traffic_root.name = "V20_Dardanelles_Marine_Traffic"
 	scene.add_child(traffic_root)
 
-	# Commercial traffic follows two separated north/south lanes through the strait.
 	_spawn_lane(CARGO, -1600.0, 3600.0, -1.0, 5.4, 3.0, 0.17)
 	_spawn_lane(TANKER, -2050.0, -2800.0, 1.0, 4.8, 3.2, 1.43)
 	_spawn_lane(CARGO, -1510.0, -1200.0, -1.0, 4.9, 2.8, 2.11)
@@ -49,6 +48,22 @@ func _spawn_lane(path: String, x: float, z: float, direction: float, speed: floa
 	if not (ship is Node3D):
 		return
 	var vessel := ship as Node3D
+	var class_name := "cargo"
+	var half_length := 84.0
+	var half_beam := 13.0
+	if path == TANKER:
+		class_name = "tanker"
+		half_length = 91.0
+		half_beam = 15.0
+	elif path == TUG:
+		class_name = "tug"
+		half_length = 17.0
+		half_beam = 6.0
+	elif path == FISHING:
+		class_name = "fishing"
+		half_length = 12.0
+		half_beam = 4.2
+	vessel.name = "V23_Marine_%s_%d" % [class_name.capitalize(), traffic_root.get_child_count()]
 	vessel.position = Vector3(x, base_y, z)
 	vessel.rotation.y = 0.0 if direction < 0.0 else PI
 	vessel.set_meta("lane_x", x)
@@ -56,6 +71,9 @@ func _spawn_lane(path: String, x: float, z: float, direction: float, speed: floa
 	vessel.set_meta("lane_speed", speed)
 	vessel.set_meta("base_y", base_y)
 	vessel.set_meta("bob_phase", phase)
+	vessel.set_meta("v23_vessel_class", class_name)
+	vessel.set_meta("v23_half_length", half_length)
+	vessel.set_meta("v23_half_beam", half_beam)
 	traffic_root.add_child(vessel)
 
 func _spawn_opposite_ferry(scene: Node) -> void:
@@ -70,6 +88,9 @@ func _spawn_opposite_ferry(scene: Node) -> void:
 	other_ferry = instance as Node3D
 	other_ferry.name = "V20_Opposite_Route_Ferry"
 	other_ferry.scale = Vector3.ONE * 0.98
+	other_ferry.set_meta("v23_vessel_class", "ferry")
+	other_ferry.set_meta("v23_half_length", 44.0)
+	other_ferry.set_meta("v23_half_beam", 8.4)
 	scene.add_child(other_ferry)
 	_update_other_ferry(0.0)
 

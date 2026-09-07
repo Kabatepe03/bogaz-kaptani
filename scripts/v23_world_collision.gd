@@ -15,6 +15,7 @@ var controller: Node
 var terrain_collision_ready := false
 var last_safe_position := Vector3.ZERO
 var last_safe_rotation := Vector3.ZERO
+var previous_frame_position := Vector3.ZERO
 var have_safe_pose := false
 var collision_cooldown := 0.0
 var warning_timer := 0.0
@@ -38,6 +39,7 @@ func _boot() -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	_force_safe_spawn()
+	previous_frame_position = ferry.global_position
 
 func _physics_process(delta: float) -> void:
 	if ferry == null or controller == null:
@@ -46,6 +48,16 @@ func _physics_process(delta: float) -> void:
 	warning_timer = maxf(0.0, warning_timer - delta)
 	if warning_label != null:
 		warning_label.visible = warning_timer > 0.0
+
+	# Route/restart buttons teleport the inherited controller between terminals. Never reuse the
+	# previous terminal's last-safe position after such a teleport; validate a fresh water spawn.
+	var teleport_distance: float = ferry.global_position.distance_to(previous_frame_position)
+	if teleport_distance > 180.0:
+		have_safe_pose = false
+		_force_safe_spawn()
+		previous_frame_position = ferry.global_position
+		return
+	previous_frame_position = ferry.global_position
 
 	var hit_reason: String = _hull_collision_reason(ferry.global_transform)
 	if hit_reason.is_empty():
@@ -56,6 +68,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_resolve_collision(hit_reason)
+	previous_frame_position = ferry.global_position
 
 func _install_terrain_collision() -> void:
 	var world: Node = controller.find_child("V20_REAL_CANAKKALE_WORLD", true, false)
@@ -69,8 +82,6 @@ func _install_terrain_collision() -> void:
 			continue
 		if mesh_node.mesh == null:
 			continue
-		# The visual DEM is also the authoritative shoreline collision surface. One trimesh is
-		# substantially cheaper than thousands of hand-made coastal boxes and follows real terrain.
 		mesh_node.create_trimesh_collision()
 		terrain_collision_ready = true
 		break
@@ -143,13 +154,8 @@ func _dock_point_test(point: Vector3, dock_ll: Vector2, opposite_ll: Vector2, do
 	var longitudinal: float = rel.dot(seaward)
 	var lateral: float = rel.dot(lateral_axis)
 
-	# Behind the ramp line is solid city/terminal land. This closes the old loophole where the
-	# manually transformed ferry could simply drive through the waterfront.
 	if longitudinal < -1.5 and longitudinal > -420.0 and absf(lateral) < 330.0:
 		return "%s KIYISI" % dock_name
-
-	# The first metres seaward contain two fender/quay structures with a real ferry opening in
-	# the middle. The vessel may enter the opening but cannot cut through the pier itself.
 	if longitudinal >= -2.0 and longitudinal <= DOCK_PIER_LENGTH:
 		var abs_lat := absf(lateral)
 		if abs_lat > DOCK_CLEAR_HALF_WIDTH and abs_lat < DOCK_PIER_OUTER_WIDTH:
@@ -195,8 +201,6 @@ func _force_safe_spawn() -> void:
 	seaward.y = 0.0
 	seaward = seaward.normalized()
 
-	# Start close enough to feel like a departure but never on the road/ramp mesh. Search outward
-	# until all eight hull sample points are over water and clear of both fender walls.
 	var selected := dock + seaward * 126.0 + Vector3.UP * 2.0
 	for offset in range(126, 341, 18):
 		var candidate := dock + seaward * float(offset) + Vector3.UP * 2.0
@@ -210,4 +214,5 @@ func _force_safe_spawn() -> void:
 	controller.set("route_start", selected)
 	last_safe_position = ferry.global_position
 	last_safe_rotation = ferry.global_rotation
+	previous_frame_position = ferry.global_position
 	have_safe_pose = true

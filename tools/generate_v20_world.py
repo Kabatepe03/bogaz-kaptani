@@ -3,7 +3,6 @@ import os
 
 import numpy as np
 import trimesh
-from trimesh.visual.material import PBRMaterial
 
 import generate_v12_world as v12
 import generate_v14_world as v14
@@ -30,6 +29,18 @@ MAT_TRUNK = v12.pbr("v20_tree_trunk", (0.18, 0.11, 0.055), 0.0, 0.97)
 MAT_PINE = v12.pbr("v20_pine", (0.055, 0.145, 0.055), 0.0, 0.95)
 MAT_CYPRESS = v12.pbr("v20_cypress", (0.035, 0.115, 0.045), 0.0, 0.96)
 MAT_SHRUB = v12.pbr("v20_scrub", (0.19, 0.25, 0.105), 0.0, 0.97)
+MAT_LANDCOVER = {
+    "forest": v12.pbr("v23_land_forest", (0.070, 0.155, 0.055), 0.0, 0.98),
+    "orchard": v12.pbr("v23_land_orchard", (0.22, 0.31, 0.12), 0.0, 0.97),
+    "vineyard": v12.pbr("v23_land_vineyard", (0.19, 0.27, 0.09), 0.0, 0.98),
+    "farmland": v12.pbr("v23_land_farmland", (0.39, 0.37, 0.18), 0.0, 0.99),
+    "meadow": v12.pbr("v23_land_meadow", (0.30, 0.40, 0.18), 0.0, 0.98),
+    "grass": v12.pbr("v23_land_grass", (0.25, 0.39, 0.17), 0.0, 0.98),
+    "park": v12.pbr("v23_land_park", (0.18, 0.38, 0.16), 0.0, 0.96),
+    "scrub": v12.pbr("v23_land_scrub", (0.28, 0.31, 0.13), 0.0, 0.99),
+}
+MAT_QUAY = v12.pbr("v23_osm_quay", (0.31, 0.32, 0.30), 0.02, 0.93)
+MAT_COAST = v12.pbr("v23_osm_coast_edge", (0.30, 0.27, 0.20), 0.0, 0.98)
 
 
 def local_to_lat_lon(x: float, z: float):
@@ -64,27 +75,20 @@ def gable_roof(points, height: float):
     roof_h = max(0.65, min(2.8, min(sx, sz) * 0.20))
     ex = sx * 0.54
     ez = sz * 0.54
-
     if sx >= sz:
         verts = np.array([
             [cx-ex, eave_y, cz-ez], [cx+ex, eave_y, cz-ez],
             [cx-ex, eave_y, cz+ez], [cx+ex, eave_y, cz+ez],
             [cx-ex, eave_y+roof_h, cz], [cx+ex, eave_y+roof_h, cz],
         ], dtype=np.float64)
-        faces = np.array([
-            [0,1,5], [0,5,4], [2,4,5], [2,5,3],
-            [0,4,2], [1,3,5],
-        ], dtype=np.int64)
+        faces = np.array([[0,1,5], [0,5,4], [2,4,5], [2,5,3], [0,4,2], [1,3,5]], dtype=np.int64)
     else:
         verts = np.array([
             [cx-ex, eave_y, cz-ez], [cx+ex, eave_y, cz-ez],
             [cx-ex, eave_y, cz+ez], [cx+ex, eave_y, cz+ez],
             [cx, eave_y+roof_h, cz-ez], [cx, eave_y+roof_h, cz+ez],
         ], dtype=np.float64)
-        faces = np.array([
-            [0,4,5], [0,5,2], [1,3,5], [1,5,4],
-            [0,1,4], [2,5,3],
-        ], dtype=np.int64)
+        faces = np.array([[0,4,5], [0,5,2], [1,3,5], [1,5,4], [0,1,4], [2,5,3]], dtype=np.int64)
     mesh = trimesh.Trimesh(verts, faces, process=True, validate=True)
     mesh.fix_normals()
     return mesh
@@ -127,6 +131,97 @@ def make_shrub(x: float, z: float, y: float, scale: float):
     return crown
 
 
+def landcover_kind(tags):
+    natural = tags.get("natural", "")
+    landuse = tags.get("landuse", "")
+    leisure = tags.get("leisure", "")
+    if natural == "wood" or landuse == "forest":
+        return "forest"
+    if natural == "scrub":
+        return "scrub"
+    if natural == "grassland":
+        return "grass"
+    if landuse in ("orchard", "vineyard", "farmland", "meadow", "grass"):
+        return landuse
+    if landuse == "recreation_ground" or leisure in ("park", "garden"):
+        return "park"
+    return None
+
+
+def landcover_mesh(points):
+    if v12.Polygon is None or len(points) < 4:
+        return None
+    coords = [v12.to_local(lat, lon) for lat, lon in points]
+    if coords[0] == coords[-1]:
+        coords = coords[:-1]
+    if len(coords) < 3:
+        return None
+    try:
+        poly = v12.Polygon(coords)
+        if not poly.is_valid:
+            poly = poly.buffer(0)
+        if poly.is_empty or poly.area < 45.0 or poly.area > 4_500_000.0:
+            return None
+        verts2, faces = trimesh.creation.triangulate_polygon(poly, engine="earcut")
+        verts3 = []
+        for x, z in verts2:
+            lat, lon = local_to_lat_lon(float(x), float(z))
+            y = max(0.18, min(330.0, float(v12.elevation(lat, lon)))) + 0.10
+            verts3.append((float(x), y, float(z)))
+        mesh = trimesh.Trimesh(np.asarray(verts3), np.asarray(faces), process=False)
+        mesh.fix_normals()
+        return mesh
+    except Exception:
+        return None
+
+
+def build_landcover(elements):
+    groups = {key: [] for key in MAT_LANDCOVER}
+    quay_segments = []
+    coast_segments = []
+    accepted = 0
+    for element in elements:
+        tags = element.get("tags", {})
+        pts = v12.geometry_points(element)
+        kind = landcover_kind(tags)
+        if kind and len(pts) >= 4 and accepted < 650:
+            mesh = landcover_mesh(pts)
+            if mesh is not None:
+                groups[kind].append(mesh)
+                accepted += 1
+        if tags.get("man_made") == "quay" and len(pts) >= 2:
+            for a, b in zip(pts[:-1], pts[1:]):
+                seg = v12.road_segment(a, b, 3.4)
+                if seg is not None:
+                    quay_segments.append(seg)
+                    if len(quay_segments) >= 320:
+                        break
+        if tags.get("natural") == "coastline" and len(pts) >= 2:
+            for a, b in zip(pts[:-1], pts[1:]):
+                seg = v12.road_segment(a, b, 1.6)
+                if seg is not None:
+                    coast_segments.append(seg)
+                    if len(coast_segments) >= 850:
+                        break
+
+    scene = trimesh.Scene()
+    for kind, meshes in groups.items():
+        if meshes:
+            merged = trimesh.util.concatenate(meshes)
+            merged.visual = trimesh.visual.TextureVisuals(material=MAT_LANDCOVER[kind])
+            scene.add_geometry(merged, node_name=f"V23_OSM_Landcover_{kind}")
+    if quay_segments:
+        merged = trimesh.util.concatenate(quay_segments)
+        merged.visual = trimesh.visual.TextureVisuals(material=MAT_QUAY)
+        scene.add_geometry(merged, node_name="V23_OSM_Quays")
+    if coast_segments:
+        merged = trimesh.util.concatenate(coast_segments)
+        merged.visual = trimesh.visual.TextureVisuals(material=MAT_COAST)
+        scene.add_geometry(merged, node_name="V23_OSM_CoastlineEdge")
+    print("V23 OSM landcover:", {k: len(v) for k, v in groups.items()}, "quay", len(quay_segments), "coast", len(coast_segments))
+    return scene
+
+
 def build_dense_city(elements):
     scene = trimesh.Scene()
     wall_groups = [[] for _ in MAT_WALLS]
@@ -142,11 +237,9 @@ def build_dense_city(elements):
         if stats is None:
             continue
         _, _, sx, sz, _ = stats
-        area_hint = sx * sz
-        candidates.append((area_hint, e, pts))
+        candidates.append((sx * sz, e, pts))
     candidates.sort(key=lambda item: item[0], reverse=True)
 
-    # Much denser than the previous 950-building mobile prototype. Merging keeps draw calls low.
     for idx, (_, element, pts) in enumerate(candidates[:2400]):
         tags = element.get("tags", {})
         height = v12.parse_height(tags)
@@ -154,10 +247,8 @@ def build_dense_city(elements):
         if wall is None:
             continue
         wall_groups[idx % len(wall_groups)].append(wall)
-
-        roof = None
-        # Eceabat/Gallipoli gets more pitched terracotta roofs; denser Çanakkale core mixes flat roofs.
         stats = building_stats(pts)
+        roof = None
         if stats is not None:
             cx = stats[0]
             pitched_bias = 0.78 if cx < -1200.0 else 0.48
@@ -205,12 +296,7 @@ def build_dense_city(elements):
 
 def build_nature():
     rng = np.random.default_rng(20092026)
-    trunks = []
-    pine = []
-    cypress = []
-    shrubs = []
-
-    # Gallipoli peninsula: dense Mediterranean vegetation on the recognisable hillside.
+    trunks, pine, cypress, shrubs = [], [], [], []
     attempts = 0
     while len(pine) + len(cypress) < 2300 and attempts < 9000:
         attempts += 1
@@ -232,7 +318,6 @@ def build_nature():
             trunks.append(trunk)
             cypress.append(crown)
 
-    # Çanakkale side: lower-density urban/peri-urban green to keep the city readable.
     attempts = 0
     while len(shrubs) < 900 and attempts < 5000:
         attempts += 1
@@ -267,18 +352,22 @@ def build_nature():
 
 
 def main():
-    print("v20 world: sampling smooth real DEM...")
+    print("v23 world: sampling smooth real DEM...")
     terrain = v14.build_smooth_terrain()
     scene = trimesh.Scene()
     scene.add_geometry(terrain, node_name="RealTerrainV20_Smoothed")
 
-    print("v20 world: downloading dense OSM geometry...")
+    print("v23 world: downloading dense OSM city + landcover snapshot...")
     elements = v12.overpass_elements()
     city = build_dense_city(elements)
     for name, geom in city.geometry.items():
         scene.add_geometry(geom.copy(), node_name=name)
 
-    print("v20 world: building Mediterranean nature pass...")
+    landcover = build_landcover(elements)
+    for name, geom in landcover.geometry.items():
+        scene.add_geometry(geom.copy(), node_name=name)
+
+    print("v23 world: building Mediterranean far-LOD nature pass...")
     nature = build_nature()
     for name, geom in nature.geometry.items():
         scene.add_geometry(geom.copy(), node_name=name)
@@ -288,7 +377,7 @@ def main():
     with open(target, "wb") as stream:
         stream.write(data)
     with open(os.path.join(OUT, "WORLD_ATTRIBUTION.txt"), "w", encoding="utf-8") as stream:
-        stream.write("Map data © OpenStreetMap contributors, ODbL. Terrain elevation from AWS Open Data / Mapzen Terrain Tiles. V20 procedural roofs and vegetation are original game geometry.\n")
+        stream.write("Map data © OpenStreetMap contributors, ODbL. Terrain elevation from AWS Open Data / Mapzen Terrain Tiles. OSM landcover, shoreline, roads and buildings are rendered in V23; procedural detail geometry is original game content.\n")
     print(f"generated {target}: {len(data)/1024/1024:.2f} MB, source_elements={len(elements)}")
 
 

@@ -37,10 +37,10 @@ func _install_v10_cameras() -> void:
 func _add_cargo_vehicle(kind: String, x: float, z: float, color_index: int) -> void:
 	# v11 GLB vehicle meshes were authored at roughly 2x road scale. Keep the asset detail,
 	# but put them back at true passenger-car / bus / truck proportions on the deck.
-	var vehicle := V11VehicleFactory.create_vehicle(kind, Vector3(x, 5.62, z), VEHICLE_COLORS[color_index % VEHICLE_COLORS.size()])
+	var vehicle: Node3D = V11VehicleFactory.create_vehicle(kind, Vector3(x, 5.62, z), VEHICLE_COLORS[color_index % VEHICLE_COLORS.size()])
 	vehicle.scale = Vector3(0.5, 0.5, 0.5)
 	cargo_root.add_child(vehicle)
-	var weight := V11VehicleFactory.weight_for(kind)
+	var weight: float = V11VehicleFactory.weight_for(kind)
 	cargo_tons += weight
 	if x < 0.0:
 		port_tons += weight
@@ -86,6 +86,7 @@ func _install_v13_captain_assist() -> void:
 	stability_bar.anchor_bottom = 0.94
 	stability_bar.min_value = 0.0
 	stability_bar.max_value = 100.0
+	stability_bar.value = 0.0
 	stability_bar.show_percentage = false
 	stability_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(stability_bar)
@@ -151,7 +152,7 @@ func _retitle_v14(node: Node) -> void:
 func _compact_buttons(node: Node) -> void:
 	if node is Button:
 		var b := node as Button
-		var t := b.text
+		var t: String = b.text
 		b.modulate.a = 0.78
 		if t == "SOL":
 			_set_button_rect(b, 0.020, 0.805, 0.120, 0.965, 22)
@@ -205,6 +206,6 @@ func _tune_v14_environment() -> void:
 func _update_v14_nav() -> void:
 	if v14_nav_label == null or ferry == null or cameras.is_empty():
 		return
-	var target_name := "ECEABAT" if route_forward else "ÇANAKKALE"
-	var cam_name := cameras[camera_index].name if camera_index < cameras.size() else "SÜRÜŞ"
+	var target_name: String = "ECEABAT" if route_forward else "ÇANAKKALE"
+	var cam_name: String = str(cameras[camera_index].name) if camera_index < cameras.size() else "SÜRÜŞ"
 	v14_nav_label.text = "BOĞAZ KAPTANI V14 • %s • %.0f m\n%.1f kn  •  Gaz %d%%  •  %s" % [target_name, maxf(route_distance_m, 0.0), absf(ground_speed_kn), int(round(throttle * 100.0)), cam_name]

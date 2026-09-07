@@ -9,6 +9,8 @@ uniform float wave_height = 0.58;
 uniform float sea_state = 0.55;
 uniform float time_scale = 0.72;
 
+varying vec2 world_xz;
+
 float hash21(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
     p += dot(p, p + 45.32);
@@ -54,18 +56,17 @@ float displacement_field(vec2 p) {
 }
 
 void vertex() {
-    vec2 worldish = UV * 15500.0;
-    float broad = displacement_field(worldish);
-    float irregular = (value_noise(worldish * 0.008 + vec2(TIME * 0.015, -TIME * 0.010)) - 0.5) * 0.14;
+    vec4 world = MODEL_MATRIX * vec4(VERTEX, 1.0);
+    world_xz = world.xz;
+    float broad = displacement_field(world_xz);
+    float irregular = (value_noise(world_xz * 0.008 + vec2(TIME * 0.015, -TIME * 0.010)) - 0.5) * 0.14;
     VERTEX.y += (broad + irregular) * wave_height * (0.58 + sea_state * 0.70);
 }
 
 void fragment() {
-    vec2 p = UV * 15500.0;
+    vec2 p = world_xz;
     float t = TIME * time_scale;
 
-    // Analytic-looking normal breakup from several independent scales. The low-frequency field
-    // keeps long Dardanelles swells readable while the FBM stops the surface from looking tiled.
     float eps = 0.72;
     float h0 = displacement_field(p) + (fbm(p * 0.045 + vec2(t * 0.09, -t * 0.06)) - 0.5) * 0.34;
     float hx = displacement_field(p + vec2(eps, 0.0)) + (fbm((p + vec2(eps, 0.0)) * 0.045 + vec2(t * 0.09, -t * 0.06)) - 0.5) * 0.34;
@@ -84,7 +85,6 @@ void fragment() {
     float sharp_glint = pow(max(dot(reflected, VIEW), 0.0), 145.0) * 0.62;
     float broad_glint = pow(max(dot(reflected, VIEW), 0.0), 34.0) * 0.10;
 
-    // Tiny crest breakup only: never produces the giant white carpet blobs from older builds.
     float crest = smoothstep(0.63, 0.90, h0) * smoothstep(0.52, 0.82, micro_variation);
     float foam = crest * (0.025 + sea_state * 0.035);
 

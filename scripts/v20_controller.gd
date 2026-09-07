@@ -5,15 +5,15 @@ const V20VehicleFactory = preload("res://scripts/v20_vehicle_factory.gd")
 const V20_WORLD_PATH := "res://assets/v12/canakkale_real_world_v12.glb"
 const V20_DOCK_CENTER_OFFSET_M := 64.0
 
-const ASPHALT_DIFF := "res://assets/v20/materials/asphalt_diff.jpg"
-const ASPHALT_NORMAL := "res://assets/v20/materials/asphalt_normal.jpg"
-const ASPHALT_ROUGH := "res://assets/v20/materials/asphalt_rough.jpg"
-const CONCRETE_DIFF := "res://assets/v20/materials/concrete_diff.jpg"
-const CONCRETE_NORMAL := "res://assets/v20/materials/concrete_normal.jpg"
-const CONCRETE_ROUGH := "res://assets/v20/materials/concrete_rough.jpg"
-const RAMP_DIFF := "res://assets/v20/materials/ramp_metal_diff.jpg"
-const RAMP_NORMAL := "res://assets/v20/materials/ramp_metal_normal.jpg"
-const RAMP_ROUGH := "res://assets/v20/materials/ramp_metal_rough.jpg"
+const ASPHALT_DIFF := "res://assets/v20/materials/asphalt_diff.png"
+const ASPHALT_NORMAL := "res://assets/v20/materials/asphalt_normal.png"
+const ASPHALT_ROUGH := "res://assets/v20/materials/asphalt_rough.png"
+const CONCRETE_DIFF := "res://assets/v20/materials/concrete_diff.png"
+const CONCRETE_NORMAL := "res://assets/v20/materials/concrete_normal.png"
+const CONCRETE_ROUGH := "res://assets/v20/materials/concrete_rough.png"
+const RAMP_DIFF := "res://assets/v20/materials/ramp_metal_diff.png"
+const RAMP_NORMAL := "res://assets/v20/materials/ramp_metal_normal.png"
+const RAMP_ROUGH := "res://assets/v20/materials/ramp_metal_rough.png"
 const HARBOUR_HDRI := "res://assets/v20/lighting/harbour_day_2k.hdr"
 
 var v20_water_material: ShaderMaterial
@@ -49,16 +49,16 @@ func _build_world() -> void:
 	real_world.name = "V20_REAL_CANAKKALE_WORLD"
 	add_child(real_world)
 
-	var canakkale := GeoReference.to_local(GeoReference.CANAKKALE_DOCK)
-	var eceabat := GeoReference.to_local(GeoReference.ECEABAT_DOCK)
+	var canakkale: Vector3 = GeoReference.to_local(GeoReference.CANAKKALE_DOCK)
+	var eceabat: Vector3 = GeoReference.to_local(GeoReference.ECEABAT_DOCK)
 	_build_v20_terminal(canakkale, eceabat, "ÇANAKKALE FERİBOT TERMİNALİ")
 	_build_v20_terminal(eceabat, canakkale, "ECEABAT FERİBOT TERMİNALİ")
 	_build_dur_yolcu(GeoReference.to_local(GeoReference.DUR_YOLCU))
 
 func _build_real_docking_targets() -> void:
-	var canakkale_terminal := GeoReference.to_local(GeoReference.CANAKKALE_DOCK)
-	var eceabat_terminal := GeoReference.to_local(GeoReference.ECEABAT_DOCK)
-	var c_to_e := (eceabat_terminal - canakkale_terminal).normalized()
+	var canakkale_terminal: Vector3 = GeoReference.to_local(GeoReference.CANAKKALE_DOCK)
+	var eceabat_terminal: Vector3 = GeoReference.to_local(GeoReference.ECEABAT_DOCK)
+	var c_to_e: Vector3 = (eceabat_terminal - canakkale_terminal).normalized()
 	canakkale_stop = canakkale_terminal + c_to_e * V20_DOCK_CENTER_OFFSET_M
 	eceabat_stop = eceabat_terminal - c_to_e * V20_DOCK_CENTER_OFFSET_M
 	canakkale_zone = _make_docking_zone(canakkale_stop, -c_to_e, "ÇANAKKALE YANAŞMA ALANI")
@@ -71,7 +71,6 @@ func _reset_route() -> void:
 	if ferry == null:
 		return
 
-	# Start genuinely moored in open water alongside the ramp, never inside a road mesh.
 	route_start = canakkale_stop if route_forward else eceabat_stop
 	route_target = eceabat_stop if route_forward else canakkale_stop
 	ferry.global_position = route_start + Vector3(0.0, 2.0, 0.0)
@@ -87,9 +86,9 @@ func _reset_route() -> void:
 	_update_dock_visibility()
 
 func _add_cargo_vehicle(kind: String, x: float, z: float, color_index: int) -> void:
-	var vehicle := V20VehicleFactory.create_vehicle(kind, Vector3(x, 5.31, z), VEHICLE_COLORS[color_index % VEHICLE_COLORS.size()])
+	var vehicle: Node3D = V20VehicleFactory.create_vehicle(kind, Vector3(x, 5.31, z), VEHICLE_COLORS[color_index % VEHICLE_COLORS.size()])
 	cargo_root.add_child(vehicle)
-	var weight := V20VehicleFactory.weight_for(kind)
+	var weight: float = V20VehicleFactory.weight_for(kind)
 	cargo_tons += weight
 	if x < 0.0:
 		port_tons += weight
@@ -98,14 +97,14 @@ func _add_cargo_vehicle(kind: String, x: float, z: float, color_index: int) -> v
 
 func _update_v15_water() -> void:
 	if v20_water_material == null:
-		var found := find_child("V20Sea", true, false)
+		var found: Node = find_child("V20Sea", true, false)
 		if found is MeshInstance3D and (found as MeshInstance3D).material_override is ShaderMaterial:
 			v20_water_material = (found as MeshInstance3D).material_override as ShaderMaterial
 	if v20_water_material == null:
 		return
-	var state := clampf(0.32 + wind_strength * 0.10, 0.32, 0.86)
-	var height := clampf(0.40 + wind_strength * 0.095, 0.40, 0.82)
-	var time_speed := clampf(0.58 + wind_strength * 0.040, 0.58, 0.88)
+	var state: float = clampf(0.32 + wind_strength * 0.10, 0.32, 0.86)
+	var height: float = clampf(0.40 + wind_strength * 0.095, 0.40, 0.82)
+	var time_speed: float = clampf(0.58 + wind_strength * 0.040, 0.58, 0.88)
 	v20_water_material.set_shader_parameter("sea_state", state)
 	v20_water_material.set_shader_parameter("wave_height", height)
 	v20_water_material.set_shader_parameter("time_scale", time_speed)
@@ -155,19 +154,16 @@ func _build_v20_terminal(origin: Vector3, opposite: Vector3, terminal_name: Stri
 	var steel := _flat_mat(Color(0.30,0.32,0.33), 0.42, 0.62)
 	var glass := _flat_mat(Color(0.018,0.050,0.066), 0.12, 0.20)
 
-	# Shore apron stays on land (+Z). Only the articulated steel ramp reaches seaward (-Z).
 	root.add_child(_v20_box(Vector3(55.0, 1.7, 42.0), Vector3(0, 0.72, 22.0), concrete, "ConcreteSurface"))
 	root.add_child(_v20_box(Vector3(49.0, 0.16, 36.0), Vector3(0, 1.63, 23.0), asphalt, "AsphaltSurface"))
 	root.add_child(_v20_box(Vector3(34.0, 0.18, 88.0), Vector3(0, 1.67, 82.0), asphalt, "AsphaltSurface"))
 
-	# Realistic ramp throat: a narrow articulated metal bridge, not a four-lane road under the ship.
 	root.add_child(_v20_box(Vector3(18.6, 0.30, 24.0), Vector3(0, 1.17, -9.0), steel, "RampSurface"))
 	root.add_child(_v20_box(Vector3(0.44, 1.15, 25.0), Vector3(-9.45, 1.35, -9.0), steel, "RampSurface"))
 	root.add_child(_v20_box(Vector3(0.44, 1.15, 25.0), Vector3(9.45, 1.35, -9.0), steel, "RampSurface"))
 	for x in [-6.0, -2.0, 2.0, 6.0]:
 		root.add_child(_v20_box(Vector3(0.10, 0.025, 21.0), Vector3(x, 1.34, -9.0), _flat_mat(Color(0.86,0.77,0.19),0.62,0.01), "LaneMark"))
 
-	# Mooring dolphins stand in water and visually separate the quay from the ferry berth.
 	for side in [-1.0, 1.0]:
 		for z in [-18.0, -30.0]:
 			var dolphin := MeshInstance3D.new()
@@ -181,7 +177,6 @@ func _build_v20_terminal(origin: Vector3, opposite: Vector3, terminal_name: Stri
 			dolphin.material_override = steel
 			root.add_child(dolphin)
 
-	# Compact terminal building is safely on shore, never beside/under the ship.
 	var terminal := Node3D.new()
 	terminal.position = Vector3(21.0, 1.65, 69.0)
 	root.add_child(terminal)
@@ -285,9 +280,11 @@ func _v20_lamp(pos: Vector3) -> Node3D:
 func _update_v14_nav() -> void:
 	if v14_nav_label == null or ferry == null or cameras.is_empty():
 		return
-	var target_name := "ECEABAT" if route_forward else "ÇANAKKALE"
-	var cam_name := cameras[camera_index].name if camera_index < cameras.size() else "SÜRÜŞ"
-	var second_line := "%.1f kn • Gaz %d%% • %s" % [absf(ground_speed_kn), int(round(throttle * 100.0)), cam_name]
+	var target_name: String = "ECEABAT" if route_forward else "ÇANAKKALE"
+	var cam_name: String = "SÜRÜŞ"
+	if camera_index >= 0 and camera_index < cameras.size():
+		cam_name = String(cameras[camera_index].name)
+	var second_line: String = "%.1f kn • Gaz %d%% • %s" % [absf(ground_speed_kn), int(round(throttle * 100.0)), cam_name]
 	if camera_index == free_camera_index:
 		second_line = "SERBEST 360° • sürükle: döndür • 2 parmak: zoom"
 	v14_nav_label.text = "BOĞAZ KAPTANI V20 REMASTER • %s • %.0f m\n%s" % [target_name, maxf(route_distance_m, 0.0), second_line]

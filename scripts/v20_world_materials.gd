@@ -21,21 +21,21 @@ func _install_when_ready() -> void:
 func _install_materials() -> bool:
 	if _installed:
 		return true
-	var scene := get_tree().current_scene
+	var scene: Node = get_tree().current_scene
 	if scene == null:
 		return false
-	var world := scene.find_child("V20_REAL_CANAKKALE_WORLD", true, false)
+	var world: Node = scene.find_child("V20_REAL_CANAKKALE_WORLD", true, false)
 	if world == null:
 		return false
 
-	var grass_diff := _load_texture("res://assets/v20/terrain/dry_grass_diff")
-	var grass_rough := _load_texture("res://assets/v20/terrain/dry_grass_rough")
-	var dirt_diff := _load_texture("res://assets/v20/terrain/dirt_diff")
-	var dirt_rough := _load_texture("res://assets/v20/terrain/dirt_rough")
-	var rock_diff := _load_texture("res://assets/v20/terrain/rock_diff")
-	var rock_rough := _load_texture("res://assets/v20/terrain/rock_rough")
-	var asphalt_diff := _load_texture("res://assets/v20/materials/asphalt_diff")
-	var asphalt_rough := _load_texture("res://assets/v20/materials/asphalt_rough")
+	var grass_diff: Texture2D = _load_texture("res://assets/v20/terrain/dry_grass_diff")
+	var grass_rough: Texture2D = _load_texture("res://assets/v20/terrain/dry_grass_rough")
+	var dirt_diff: Texture2D = _load_texture("res://assets/v20/terrain/dirt_diff")
+	var dirt_rough: Texture2D = _load_texture("res://assets/v20/terrain/dirt_rough")
+	var rock_diff: Texture2D = _load_texture("res://assets/v20/terrain/rock_diff")
+	var rock_rough: Texture2D = _load_texture("res://assets/v20/terrain/rock_rough")
+	var asphalt_diff: Texture2D = _load_texture("res://assets/v20/materials/asphalt_diff")
+	var asphalt_rough: Texture2D = _load_texture("res://assets/v20/materials/asphalt_rough")
 
 	var terrain_mat := ShaderMaterial.new()
 	terrain_mat.shader = TerrainShader
@@ -69,8 +69,6 @@ func _install_materials() -> bool:
 			mesh_node.material_override = road_mat
 			changed += 1
 
-	# Terminal geometry is created outside the imported real-world node. Apply the same photo-scanned
-	# road material there so the ferry berth and city roads no longer look like flat-color primitives.
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		if not (node is MeshInstance3D):
 			continue
@@ -81,10 +79,11 @@ func _install_materials() -> bool:
 	return changed > 0
 
 func _load_texture(base_path: String) -> Texture2D:
-	for extension in [".png", ".jpg", ".jpeg"]:
-		var path := base_path + extension
+	var extensions: Array[String] = [".png", ".jpg", ".jpeg"]
+	for extension: String in extensions:
+		var path: String = base_path + extension
 		if ResourceLoader.exists(path):
-			var resource := load(path)
+			var resource: Resource = load(path)
 			if resource is Texture2D:
 				return resource as Texture2D
 	return null

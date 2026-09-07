@@ -2,8 +2,6 @@ name: Android v22 ultra simulation APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "v22-ultra-sim" ]
 
 jobs:
   build:

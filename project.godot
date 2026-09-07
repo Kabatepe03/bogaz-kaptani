@@ -25,6 +25,7 @@ V23CC0Foliage="*res://scripts/v23_cc0_foliage.gd"
 V23NightLighting="*res://scripts/v23_night_lighting.gd"
 V23CityLife="*res://scripts/v23_city_life.gd"
 V23MarineCollision="*res://scripts/v23_marine_collision.gd"
+V23FerryRamps="*res://scripts/v23_ferry_ramps.gd"
 
 [display]
 window/size/viewport_width=1920

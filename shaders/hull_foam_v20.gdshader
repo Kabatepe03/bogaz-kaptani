@@ -1,8 +1,8 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, blend_mix;
 
-uniform vec3 foam_color : source_color = vec3(0.78, 0.84, 0.84);
-uniform vec3 water_tint : source_color = vec3(0.14, 0.28, 0.32);
+uniform vec3 foam_color : source_color = vec3(0.70, 0.78, 0.79);
+uniform vec3 water_tint : source_color = vec3(0.045, 0.12, 0.15);
 uniform float intensity = 0.62;
 
 float hash21(vec2 p) {
@@ -19,14 +19,15 @@ float noise2(vec2 p) {
 }
 
 void fragment() {
-    float edge = smoothstep(0.02, 0.32, UV.x) * (1.0 - smoothstep(0.68, 0.98, UV.x));
-    float along = 1.0 - smoothstep(0.58, 1.0, UV.y);
-    float n1 = noise2(vec2(UV.x * 19.0 + TIME * 0.24, UV.y * 31.0 - TIME * 0.75));
-    float n2 = noise2(vec2(UV.x * 47.0 - TIME * 0.18, UV.y * 73.0 + TIME * 0.55));
-    float broken = smoothstep(0.44, 0.76, n1 * 0.68 + n2 * 0.32);
+    float edge = smoothstep(0.03, 0.34, UV.x) * (1.0 - smoothstep(0.66, 0.97, UV.x));
+    float along = 1.0 - smoothstep(0.50, 1.0, UV.y);
+    float n1 = noise2(vec2(UV.x * 23.0 + TIME * 0.26, UV.y * 39.0 - TIME * 0.82));
+    float n2 = noise2(vec2(UV.x * 61.0 - TIME * 0.20, UV.y * 87.0 + TIME * 0.61));
+    float n3 = noise2(vec2(UV.x * 107.0 + TIME * 0.11, UV.y * 141.0 - TIME * 0.39));
+    float broken = smoothstep(0.56, 0.80, n1 * 0.55 + n2 * 0.31 + n3 * 0.14);
     float alpha = edge * along * broken * intensity * COLOR.a;
-    if (alpha < 0.015) discard;
-    vec3 c = mix(water_tint, foam_color, 0.62 + n2 * 0.27);
+    if (alpha < 0.012) discard;
+    vec3 c = mix(water_tint, foam_color, 0.45 + n2 * 0.34);
     ALBEDO = c;
-    ALPHA = min(alpha * 0.46, 0.30);
+    ALPHA = min(alpha * 0.26, 0.115);
 }

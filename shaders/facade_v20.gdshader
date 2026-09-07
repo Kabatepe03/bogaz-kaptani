@@ -8,6 +8,8 @@ uniform vec3 plaster_d : source_color = vec3(0.70, 0.80, 0.82);
 uniform vec3 plaster_e : source_color = vec3(0.87, 0.82, 0.66);
 uniform vec3 glass_color : source_color = vec3(0.012, 0.045, 0.065);
 uniform vec3 roof_color : source_color = vec3(0.38, 0.16, 0.085);
+uniform float night_factor : hint_range(0.0, 1.0) = 0.0;
+uniform vec3 warm_window : source_color = vec3(1.0, 0.48, 0.16);
 
 varying vec3 world_pos;
 varying vec3 world_nrm;
@@ -34,9 +36,9 @@ void fragment() {
     else if (seed < 0.82) plaster = plaster_d;
     else plaster = plaster_e;
     plaster *= 0.92 + seed2 * 0.13;
+    EMISSION = vec3(0.0);
 
     if (abs(n.y) > 0.68) {
-        // Tile-scale breakup makes pitched roofs read as terracotta rather than flat orange slabs.
         vec2 tile_uv = world_pos.xz * vec2(0.38, 0.58);
         float row = floor(tile_uv.y);
         float tile = fract(tile_uv.x + mod(row, 2.0) * 0.5);
@@ -69,9 +71,17 @@ void fragment() {
         facade = mix(facade, vec3(0.020,0.060,0.072), ground_floor * window_mask * 0.70);
         facade = mix(facade, vec3(0.17,0.18,0.18), mullion_x * window_mask * 0.42);
 
-        // Mediterranean lower-wall weathering and pavement splash dirt.
         float grime = (1.0 - smoothstep(0.45, 2.4, world_pos.y)) * (0.08 + seed2 * 0.10);
         facade *= 1.0 - grime;
+
+        // Window lighting varies by building, floor and bay, avoiding the fake all-windows-on look.
+        vec2 room_cell = vec2(floor(along / 2.72), floor((world_pos.y + 0.20) / 3.05));
+        float room_seed = hash21(room_cell + floor(world_pos.xz / 10.0) + vec2(seed * 17.0, seed2 * 23.0));
+        float occupied = smoothstep(0.54, 0.69, room_seed);
+        float warm_variation = 0.78 + hash21(room_cell + vec2(11.0, 5.0)) * 0.34;
+        float lit_window = window_mask * occupied * night_factor;
+        facade = mix(facade, warm_window * 0.42, lit_window * 0.52);
+        EMISSION = warm_window * lit_window * (0.70 + warm_variation * 0.80);
 
         ALBEDO = facade;
         ROUGHNESS = mix(0.80, 0.16, window_mask);

@@ -8,7 +8,7 @@ config/features=PackedStringArray("4.4", "Mobile")
 
 [autoload]
 V12FerrySwap="*res://scripts/v12_ferry_swap.gd"
-V20Wake="*res://scripts/v20_wake.gd"
+V20Wake="*res://scripts/v20_wake_ultra.gd"
 V20WorldMaterials="*res://scripts/v20_world_materials.gd"
 V20Landmarks="*res://scripts/v20_landmarks.gd"
 V20EceabatFlag="*res://scripts/v20_eceabat_flag.gd"

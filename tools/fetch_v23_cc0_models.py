@@ -7,12 +7,12 @@ import zipfile
 ROOT = pathlib.Path("assets/v23/vegetation")
 ROOT.mkdir(parents=True, exist_ok=True)
 BASE = "https://api.polyhaven.com/files/"
-UA = "BogazKaptani-DigitalTwin/23.0 (+https://github.com/Kabatepe03/bogaz-kaptani)"
+UA = "BogazKaptani-UltraRealism/30.0 (+https://github.com/Kabatepe03/bogaz-kaptani)"
 
-# These are used only for the near/mid foliage layer. The merged procedural forest remains the
-# kilometre-scale LOD, so spending 2K textures here improves close shots without duplicating every tree.
+# V23's pine_tree_01 geometry package exceeded ~900 MB before Godot import. V30 keeps two real
+# Poly Haven CC0 tree species for the close layer and uses the merged kilometre-scale forest as LOD.
+# This makes the APK/install practical without returning to cone/tree placeholders.
 ASSETS = {
-    "pine_tree_01": "2k",
     "tree_small_02": "2k",
     "island_tree_03": "2k",
 }
@@ -55,10 +55,13 @@ def choose(records, asset_id: str, resolution: str):
             continue
         if "gltf" not in path and "gltf" not in lower:
             continue
-        if lower.endswith(".zip"):
+        # Prefer self-contained GLB/GTLF before archives when Poly Haven exposes both.
+        if lower.endswith(".glb"):
             gltf_records.append((0, path, record))
-        elif lower.endswith(".gltf") or lower.endswith(".glb"):
+        elif lower.endswith(".gltf"):
             gltf_records.append((1, path, record))
+        elif lower.endswith(".zip"):
+            gltf_records.append((2, path, record))
     if not gltf_records:
         raise RuntimeError(f"No {resolution} glTF package found for {asset_id}")
     gltf_records.sort(key=lambda item: item[0])
@@ -104,7 +107,7 @@ def fetch_asset(asset_id: str, resolution: str):
     else:
         download_includes(record.get("include"), out_dir)
 
-    candidates = sorted(out_dir.rglob("*.gltf")) + sorted(out_dir.rglob("*.glb"))
+    candidates = sorted(out_dir.rglob("*.glb")) + sorted(out_dir.rglob("*.gltf"))
     if not candidates:
         raise RuntimeError(f"Downloaded {asset_id} but no glTF/GLB was found")
     model = candidates[0]
@@ -112,6 +115,11 @@ def fetch_asset(asset_id: str, resolution: str):
 
 
 def main():
+    # Remove the old giant pine directory if a cached workspace ever contains it.
+    old_pine = ROOT / "pine_tree_01"
+    if old_pine.exists():
+        shutil.rmtree(old_pine)
+
     manifest = {}
     failures = {}
     for asset_id, resolution in ASSETS.items():
@@ -122,10 +130,10 @@ def main():
         except Exception as exc:
             failures[asset_id] = str(exc)
             print(f"WARNING: {asset_id}: {exc}")
-    payload = {"models": manifest, "failures": failures, "license": "Poly Haven CC0", "near_resolution": "2k"}
+    payload = {"models": manifest, "failures": failures, "license": "Poly Haven CC0", "near_resolution": "2k", "version": "v30"}
     (ROOT / "MANIFEST.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     (ROOT / "ATTRIBUTION.txt").write_text(
-        "Boğaz Kaptanı v23 vegetation\nPoly Haven CC0 assets: pine_tree_01, tree_small_02, island_tree_03.\nNear foliage uses 2K packages.\nhttps://polyhaven.com/\n",
+        "Boğaz Kaptanı V30 near vegetation\nPoly Haven CC0 assets: tree_small_02, island_tree_03.\nClose vegetation uses 2K packages; distant forest is merged game LOD geometry.\nhttps://polyhaven.com/\n",
         encoding="utf-8",
     )
 

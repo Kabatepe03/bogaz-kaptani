@@ -4,14 +4,12 @@ import os
 import numpy as np
 import trimesh
 from trimesh.visual.material import PBRMaterial
-from shapely.geometry import Point, Polygon
 
 import generate_v12_world as v12
-import generate_v14_world as v14
-import generate_v20_world as v20
 
 OUT = os.path.join("assets", "v20")
 os.makedirs(OUT, exist_ok=True)
+BASE_WORLD = os.path.join(OUT, "canakkale_eceabat_remaster_v20.glb")
 
 
 def pbr(name, rgb, rough=0.92):
@@ -92,45 +90,10 @@ def shrub_mesh(x, z, y, scale):
     return crown
 
 
-def forest_polygons(elements):
-    polys = []
-    for element in elements:
-        tags = element.get("tags", {})
-        if not (tags.get("natural") == "wood" or tags.get("landuse") == "forest"):
-            continue
-        pts = v12.geometry_points(element)
-        if len(pts) < 4:
-            continue
-        coords = [v12.to_local(lat, lon) for lat, lon in pts]
-        try:
-            poly = Polygon(coords)
-        except Exception:
-            continue
-        if poly.is_valid and 2500.0 <= poly.area <= 30_000_000.0:
-            polys.append(poly)
-    return polys
-
-
-def sample_poly(poly, count, rng, output):
-    minx, minz, maxx, maxz = poly.bounds
-    attempts = 0
-    while count > 0 and attempts < count * 18 + 300:
-        attempts += 1
-        x = float(rng.uniform(minx, maxx))
-        z = float(rng.uniform(minz, maxz))
-        if not poly.contains(Point(x, z)):
-            continue
-        y = height_at(x, z)
-        if y < 3.0 or y > 300.0:
-            continue
-        output.append((x, z, y, "pine" if rng.random() < 0.86 else "cypress", float(rng.uniform(0.90, 1.65))))
-        count -= 1
-
-
 def sample_cluster(center, radius_x, radius_z, count, rng, output, min_h, max_h, mix="pine"):
     cx, cz = center
     attempts = 0
-    while count > 0 and attempts < count * 14 + 500:
+    while count > 0 and attempts < count * 16 + 900:
         attempts += 1
         angle = float(rng.uniform(0.0, math.tau))
         r = math.sqrt(float(rng.random()))
@@ -145,44 +108,33 @@ def sample_cluster(center, radius_x, radius_z, count, rng, output, min_h, max_h,
         roll = float(rng.random())
         kind = mix
         if mix == "med":
-            kind = "pine" if roll < 0.74 else ("cypress" if roll < 0.88 else "olive")
+            kind = "pine" if roll < 0.70 else ("cypress" if roll < 0.86 else "olive")
         elif mix == "urban":
-            kind = "olive" if roll < 0.68 else "cypress"
-        output.append((x, z, y, kind, float(rng.uniform(0.88, 1.55))))
+            kind = "olive" if roll < 0.66 else "cypress"
+        output.append((x, z, y, kind, float(rng.uniform(0.94, 1.72))))
         count -= 1
 
 
-def build_ultra_nature(elements):
+def build_ultra_nature():
     rng = np.random.default_rng(20092027)
     placements = []
-
-    # First honour mapped forest/wood polygons so the green masses follow real OSM land use.
-    polys = forest_polygons(elements)
-    for poly in polys:
-        target = int(max(20, min(420, poly.area / 1350.0)))
-        sample_poly(poly, target, rng, placements)
-        if len(placements) >= 5600:
-            break
 
     eceabat = v12.to_local(40.1841667, 26.3602778)
     kilitbahir = v12.to_local(40.14778, 26.37944)
     canakkale = v12.to_local(40.1505556, 26.4019444)
 
-    # The ferry route sees these slopes constantly. Make them visually dense at real tree scale.
-    sample_cluster(eceabat, 1750.0, 1500.0, 3300, rng, placements, 5.0, 185.0, "med")
-    sample_cluster(kilitbahir, 1500.0, 1700.0, 1800, rng, placements, 5.0, 220.0, "med")
-
-    # Çanakkale is urban, but the waterfront and residential background must not look like a desert.
-    sample_cluster(canakkale, 1750.0, 1450.0, 1150, rng, placements, 3.0, 105.0, "urban")
-
-    # Wider Gallipoli backdrop for the long crossing views.
-    sample_cluster((-3000.0, -2100.0), 2600.0, 2600.0, 2200, rng, placements, 8.0, 280.0, "med")
+    # These are the areas the player stares at for most of a crossing. Density is intentionally
+    # concentrated near the visible hills and waterfront rather than spread thinly over 80 km².
+    sample_cluster(eceabat, 1450.0, 1250.0, 4200, rng, placements, 4.0, 185.0, "med")
+    sample_cluster(kilitbahir, 1300.0, 1450.0, 2600, rng, placements, 5.0, 220.0, "med")
+    sample_cluster(canakkale, 1450.0, 1250.0, 1500, rng, placements, 3.0, 105.0, "urban")
+    sample_cluster((-3000.0, -2100.0), 2200.0, 2200.0, 2600, rng, placements, 8.0, 280.0, "med")
 
     trunks = []
     pine_crowns = []
     cypress_crowns = []
     olive_crowns = []
-    for x, z, y, kind, scale in placements[:12500]:
+    for x, z, y, kind, scale in placements[:15000]:
         if kind == "cypress":
             t, crowns = cypress_parts(x, z, y, scale)
             cypress_crowns.extend(crowns)
@@ -194,14 +146,13 @@ def build_ultra_nature(elements):
             pine_crowns.extend(crowns)
         trunks.append(t)
 
-    # Low scrub patches make distant hills read as vegetation even before individual tree silhouettes resolve.
     shrubs = []
-    for _ in range(3200):
-        x = float(rng.uniform(-5200.0, 3400.0))
-        z = float(rng.uniform(-4300.0, 3600.0))
+    for _ in range(4200):
+        x = float(rng.uniform(-5000.0, 3300.0))
+        z = float(rng.uniform(-4000.0, 3400.0))
         y = height_at(x, z)
         if 4.0 <= y <= 220.0:
-            shrubs.append(shrub_mesh(x, z, y, float(rng.uniform(0.65, 1.35))))
+            shrubs.append(shrub_mesh(x, z, y, float(rng.uniform(0.72, 1.48))))
 
     scene = trimesh.Scene()
     groups = [
@@ -217,34 +168,33 @@ def build_ultra_nature(elements):
         combined = trimesh.util.concatenate(meshes)
         combined.visual = trimesh.visual.TextureVisuals(material=material)
         scene.add_geometry(combined, node_name=name)
-    print(f"ultra vegetation: placements={len(placements)}, shrubs={len(shrubs)}, forest_polygons={len(polys)}")
+    print(f"ultra vegetation: trees={len(placements)}, shrubs={len(shrubs)}")
     return scene
 
 
 def main():
-    print("v20 ultra world: smooth real DEM")
-    terrain = v14.build_smooth_terrain()
-    scene = trimesh.Scene()
-    scene.add_geometry(terrain, node_name="RealTerrainV20_Smoothed")
+    # IMPORTANT: generate_v20_world.py has already fetched OSM and written the dense city/roads/roof
+    # geometry to this GLB. Load that exact output and add nature to it. Do NOT make a second
+    # Overpass request: a transient timeout used to replace a good city with an empty world.
+    if not os.path.exists(BASE_WORLD) or os.path.getsize(BASE_WORLD) < 1024 * 1024:
+        raise RuntimeError(f"base remaster world missing: {BASE_WORLD}")
 
-    print("v20 ultra world: OSM buildings, roofs and roads")
-    elements = v12.overpass_elements()
-    city = v20.build_dense_city(elements)
-    for name, geom in city.geometry.items():
-        scene.add_geometry(geom.copy(), node_name=name)
+    print(f"v20 ultra world: preserving base OSM city from {BASE_WORLD}")
+    loaded = trimesh.load(BASE_WORLD, force="scene", process=False)
+    scene = loaded if isinstance(loaded, trimesh.Scene) else trimesh.Scene(loaded)
+    base_geometry_count = len(scene.geometry)
 
-    print("v20 ultra world: dense Mediterranean vegetation")
-    nature = build_ultra_nature(elements)
+    print("v20 ultra world: adding concentrated Mediterranean vegetation")
+    nature = build_ultra_nature()
     for name, geom in nature.geometry.items():
         scene.add_geometry(geom.copy(), node_name=name)
 
-    target = os.path.join(OUT, "canakkale_eceabat_remaster_v20.glb")
     data = scene.export(file_type="glb")
-    with open(target, "wb") as stream:
+    with open(BASE_WORLD, "wb") as stream:
         stream.write(data)
     with open(os.path.join(OUT, "WORLD_ATTRIBUTION.txt"), "w", encoding="utf-8") as stream:
         stream.write("Map data © OpenStreetMap contributors, ODbL. Terrain elevation from AWS Open Data / Mapzen Terrain Tiles. Dense vegetation and roof geometry are original procedural game assets.\n")
-    print(f"generated {target}: {len(data)/1024/1024:.2f} MB, source_elements={len(elements)}")
+    print(f"generated {BASE_WORLD}: {len(data)/1024/1024:.2f} MB, preserved_geometry_groups={base_geometry_count}, final_geometry_groups={len(scene.geometry)}")
 
 
 if __name__ == "__main__":

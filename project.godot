@@ -13,6 +13,7 @@ V20WorldMaterials="*res://scripts/v20_world_materials.gd"
 V20Landmarks="*res://scripts/v20_landmarks.gd"
 V20EceabatFlag="*res://scripts/v20_eceabat_flag.gd"
 V20RenderQuality="*res://scripts/v20_render_quality.gd"
+V20MarineTraffic="*res://scripts/v20_marine_traffic.gd"
 
 [display]
 window/size/viewport_width=1920

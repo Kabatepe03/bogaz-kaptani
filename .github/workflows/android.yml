@@ -36,8 +36,8 @@ jobs:
           python tools/generate_v15_assets.py
           python tools/generate_v20_assets.py
           python tools/generate_v20_vehicles.py
+          python tools/generate_v20_marine_assets.py
           python tools/generate_v20_world.py
-          # Keep the current controller resource path stable while v20 is developed.
           cp assets/v20/canakkale_eceabat_remaster_v20.glb assets/v12/canakkale_real_world_v12.glb
           python tools/fetch_v20_cc0_assets.py
           test -s assets/v20/ferry_remaster_v20.glb
@@ -45,6 +45,10 @@ jobs:
           test -s assets/v20/vehicles/minibus_remaster_v20.glb
           test -s assets/v20/vehicles/bus_remaster_v20.glb
           test -s assets/v20/vehicles/truck_remaster_v20.glb
+          test -s assets/v20/marine/cargo_ship_v20.glb
+          test -s assets/v20/marine/tanker_v20.glb
+          test -s assets/v20/marine/tug_v20.glb
+          test -s assets/v20/marine/fishing_boat_v20.glb
           test -s assets/v20/canakkale_eceabat_remaster_v20.glb
           test -s assets/v20/materials/asphalt_diff.png
           test -s assets/v20/materials/concrete_diff.png

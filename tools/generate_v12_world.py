@@ -7,8 +7,8 @@ import urllib.parse
 import urllib.request
 
 import numpy as np
-from PIL import Image
 import trimesh
+from PIL import Image
 from trimesh.visual.material import PBRMaterial
 
 try:
@@ -19,106 +19,81 @@ except Exception:
 OUT = os.path.join("assets", "v12")
 os.makedirs(OUT, exist_ok=True)
 
-# Çanakkale - Eceabat gameplay window. Coordinates are WGS84.
 SOUTH, WEST, NORTH, EAST = 40.125, 26.330, 40.215, 26.435
 ORIGIN_LAT, ORIGIN_LON = 40.15112, 26.40200
-ZOOM = 13
-GRID_X = 128
-GRID_Z = 144
-UA = "BogazKaptani/12.0 real-world build (OpenStreetMap + AWS Terrain Tiles)"
-
-
-def pbr(name, color, metallic=0.0, rough=0.7):
-    rgba = tuple(int(max(0, min(1, c)) * 255) for c in color[:3]) + (255,)
-    return PBRMaterial(name=name, baseColorFactor=rgba, metallicFactor=metallic, roughnessFactor=rough)
-
+GRID_X, GRID_Z = 128, 144
+TERRAIN_ZOOM = 13
+UA = "BogazKaptani-RealWorld/12.0 (+https://github.com/Kabatepe03/bogaz-kaptani)"
 
 MAT_BUILDINGS = [
-    pbr("stone_plaster", (0.73, 0.69, 0.61), 0.02, 0.78),
-    pbr("warm_plaster", (0.80, 0.71, 0.58), 0.02, 0.76),
-    pbr("light_concrete", (0.69, 0.71, 0.70), 0.04, 0.82),
-    pbr("white_plaster", (0.86, 0.85, 0.79), 0.01, 0.80),
+    PBRMaterial(name="building_warm", baseColorFactor=(210, 198, 177, 255), metallicFactor=0.0, roughnessFactor=0.86),
+    PBRMaterial(name="building_light", baseColorFactor=(224, 221, 209, 255), metallicFactor=0.0, roughnessFactor=0.84),
+    PBRMaterial(name="building_grey", baseColorFactor=(178, 183, 179, 255), metallicFactor=0.0, roughnessFactor=0.88),
+    PBRMaterial(name="building_ochre", baseColorFactor=(194, 175, 142, 255), metallicFactor=0.0, roughnessFactor=0.89),
 ]
-MAT_ROAD = pbr("asphalt", (0.080, 0.085, 0.090), 0.05, 0.92)
-MAT_MAIN_ROAD = pbr("main_asphalt", (0.095, 0.098, 0.102), 0.05, 0.89)
-MAT_TREE = pbr("mediterranean_green", (0.075, 0.20, 0.070), 0.0, 0.94)
-MAT_TRUNK = pbr("tree_trunk", (0.20, 0.12, 0.065), 0.0, 0.96)
-
-
-def to_local(lat, lon):
-    lat0 = math.radians(ORIGIN_LAT)
-    x = (lon - ORIGIN_LON) * 111320.0 * math.cos(lat0)
-    z = -(lat - ORIGIN_LAT) * 110540.0
-    return x, z
-
-
-def tile_xy(lat, lon, zoom=ZOOM):
-    n = 2.0 ** zoom
-    x = (lon + 180.0) / 360.0 * n
-    lat_rad = math.radians(max(-85.05112878, min(85.05112878, lat)))
-    y = (1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n
-    return x, y
-
+MAT_ROAD = PBRMaterial(name="road", baseColorFactor=(55, 57, 58, 255), metallicFactor=0.0, roughnessFactor=0.92)
+MAT_MAIN_ROAD = PBRMaterial(name="main_road", baseColorFactor=(47, 49, 51, 255), metallicFactor=0.0, roughnessFactor=0.90)
+MAT_TREE = PBRMaterial(name="tree", baseColorFactor=(52, 92, 43, 255), metallicFactor=0.0, roughnessFactor=0.96)
+MAT_TRUNK = PBRMaterial(name="trunk", baseColorFactor=(72, 46, 27, 255), metallicFactor=0.0, roughnessFactor=0.98)
 
 _tile_cache = {}
 
 
-def terrain_tile(tx, ty):
-    key = (int(tx), int(ty))
+def pbr(name, rgb, metallic=0.0, roughness=0.9):
+    rgba = tuple(int(max(0.0, min(1.0, c)) * 255) for c in rgb) + (255,)
+    return PBRMaterial(name=name, baseColorFactor=rgba, metallicFactor=metallic, roughnessFactor=roughness)
+
+
+def latlon_to_tile(lat, lon, zoom):
+    n = 2.0 ** zoom
+    x = (lon + 180.0) / 360.0 * n
+    lat_rad = math.radians(lat)
+    y = (1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n
+    return x, y
+
+
+def fetch_tile(tx, ty):
+    key = (tx, ty)
     if key in _tile_cache:
         return _tile_cache[key]
-    url = f"https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{ZOOM}/{key[0]}/{key[1]}.png"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": UA})
-        with urllib.request.urlopen(req, timeout=20) as response:
-            image = Image.open(io.BytesIO(response.read())).convert("RGB")
-        arr = np.asarray(image, dtype=np.float32)
-        elev = arr[:, :, 0] * 256.0 + arr[:, :, 1] + arr[:, :, 2] / 256.0 - 32768.0
-        _tile_cache[key] = elev
-    except Exception as exc:
-        print(f"terrain tile fallback {key}: {exc}")
-        _tile_cache[key] = None
-    return _tile_cache[key]
-
-
-def fallback_elevation(lat, lon):
-    # Only used if an AWS terrain tile is temporarily unavailable.
-    x, z = to_local(lat, lon)
-    west_hills = max(0.0, (-x - 1200.0) / 2200.0) * 105.0
-    east_hills = max(0.0, (x - 500.0) / 2500.0) * 48.0
-    relief = 10.0 * math.sin(x * 0.0014) * math.cos(z * 0.0011)
-    shore_guess = abs(x + 900.0 + z * 0.11)
-    if shore_guess < 560.0:
-        return -3.0
-    return max(1.0, west_hills + east_hills + relief)
+    url = f"https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{TERRAIN_ZOOM}/{tx}/{ty}.png"
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=35) as response:
+        image = np.asarray(Image.open(io.BytesIO(response.read())).convert("RGB"), dtype=np.float64)
+    elevation = image[:, :, 0] * 256.0 + image[:, :, 1] + image[:, :, 2] / 256.0 - 32768.0
+    _tile_cache[key] = elevation
+    return elevation
 
 
 def elevation(lat, lon):
-    xf, yf = tile_xy(lat, lon)
-    tx, ty = int(math.floor(xf)), int(math.floor(yf))
-    arr = terrain_tile(tx, ty)
-    if arr is None:
-        return fallback_elevation(lat, lon)
-    px = (xf - tx) * 255.0
-    py = (yf - ty) * 255.0
+    x, y = latlon_to_tile(lat, lon, TERRAIN_ZOOM)
+    tx, ty = int(math.floor(x)), int(math.floor(y))
+    px = (x - tx) * 255.0
+    py = (y - ty) * 255.0
+    arr = fetch_tile(tx, ty)
     x0, y0 = int(math.floor(px)), int(math.floor(py))
     x1, y1 = min(255, x0 + 1), min(255, y0 + 1)
     fx, fy = px - x0, py - y0
-    e0 = arr[y0, x0] * (1.0 - fx) + arr[y0, x1] * fx
-    e1 = arr[y1, x0] * (1.0 - fx) + arr[y1, x1] * fx
-    return float(e0 * (1.0 - fy) + e1 * fy)
+    a = arr[y0, x0] * (1.0 - fx) + arr[y0, x1] * fx
+    b = arr[y1, x0] * (1.0 - fx) + arr[y1, x1] * fx
+    return float(a * (1.0 - fy) + b * fy)
+
+
+def to_local(lat, lon):
+    x = (lon - ORIGIN_LON) * 111320.0 * math.cos(math.radians(ORIGIN_LAT))
+    z = -(lat - ORIGIN_LAT) * 110540.0
+    return x, z
 
 
 def build_terrain():
     vertices = []
     colors = []
     for iz in range(GRID_Z):
-        lat = NORTH + (SOUTH - NORTH) * (iz / (GRID_Z - 1))
+        lat = NORTH + (SOUTH - NORTH) * iz / (GRID_Z - 1)
         for ix in range(GRID_X):
-            lon = WEST + (EAST - WEST) * (ix / (GRID_X - 1))
+            lon = WEST + (EAST - WEST) * ix / (GRID_X - 1)
             x, z = to_local(lat, lon)
             h = elevation(lat, lon)
-            # Put open-water DEM points safely under the water shader surface.
             if h < 0.8:
                 y = -4.5
                 col = (35, 52, 49, 255)
@@ -150,11 +125,15 @@ def build_terrain():
 
 
 def overpass_elements():
-    query = f'''[out:json][timeout:60];(
+    # Keep all geography in one Overpass request so the later world passes reuse the exact same
+    # successful snapshot instead of risking a second network call replacing a good city.
+    query = f'''[out:json][timeout:90];(
       way["building"]({SOUTH},{WEST},{NORTH},{EAST});
       way["highway"~"primary|secondary|tertiary|residential|service|unclassified"]({SOUTH},{WEST},{NORTH},{EAST});
-      way["natural"="wood"]({SOUTH},{WEST},{NORTH},{EAST});
-      way["landuse"="forest"]({SOUTH},{WEST},{NORTH},{EAST});
+      way["natural"~"wood|scrub|grassland|coastline"]({SOUTH},{WEST},{NORTH},{EAST});
+      way["landuse"~"forest|orchard|farmland|vineyard|meadow|grass|recreation_ground"]({SOUTH},{WEST},{NORTH},{EAST});
+      way["leisure"~"park|garden"]({SOUTH},{WEST},{NORTH},{EAST});
+      way["man_made"="quay"]({SOUTH},{WEST},{NORTH},{EAST});
     );out tags geom;'''
     data = urllib.parse.urlencode({"data": query}).encode("utf-8")
     endpoints = [
@@ -164,7 +143,7 @@ def overpass_elements():
     for endpoint in endpoints:
         try:
             req = urllib.request.Request(endpoint, data=data, headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=75) as response:
+            with urllib.request.urlopen(req, timeout=105) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             print(f"OSM elements: {len(payload.get('elements', []))} from {endpoint}")
             return payload.get("elements", [])
@@ -212,7 +191,6 @@ def building_mesh(points, height):
             poly = Polygon(coords)
             if poly.is_valid and poly.area > 14.0 and poly.area < 12000.0:
                 mesh = trimesh.creation.extrude_polygon(poly, height=height, engine="earcut")
-                # trimesh extrusion is Z-up; Godot is Y-up.
                 verts = mesh.vertices.copy()
                 mesh.vertices = np.column_stack([verts[:, 0], verts[:, 2] + ground, verts[:, 1]])
                 mesh.fix_normals()
@@ -264,7 +242,6 @@ def build_osm_scene(elements):
     forest_polys = []
 
     buildings = [e for e in elements if "building" in e.get("tags", {})]
-    # Keep the largest/most useful footprint set for mobile draw and memory cost.
     candidates = []
     for e in buildings:
         pts = geometry_points(e)
@@ -323,7 +300,6 @@ def build_osm_scene(elements):
         for _ in range(min(18, max(3, int((maxx-minx)*(maxz-minz) / 60000.0)))):
             x = float(rng.uniform(minx, maxx))
             z = float(rng.uniform(minz, maxz))
-            # Convert local point back approximately for elevation lookup.
             lat = ORIGIN_LAT - z / 110540.0
             lon = ORIGIN_LON + x / (111320.0 * math.cos(math.radians(ORIGIN_LAT)))
             y = max(0.5, elevation(lat, lon))

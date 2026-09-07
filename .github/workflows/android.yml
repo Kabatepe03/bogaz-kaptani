@@ -1,14 +1,14 @@
-name: Android v21 mega APK
+name: Android v22 ultra simulation APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "v21-mega-upgrade" ]
+    branches: [ "v22-ultra-sim" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 110
     env:
       GODOT_VERSION: 4.4.1
       GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Build v21 world and asset pack
+      - name: Build v22 world and asset pack
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
@@ -36,10 +36,12 @@ jobs:
           python tools/generate_v15_assets.py
           python tools/generate_v20_assets.py
           python tools/generate_v20_ferry_ultra.py
+          python tools/generate_v22_ferry.py
           python tools/generate_v20_vehicles.py
           python tools/generate_v20_marine_assets.py
           python tools/generate_v20_world.py
           python tools/generate_v20_world_ultra.py
+          python tools/generate_v22_world_finish.py
           cp assets/v20/canakkale_eceabat_remaster_v20.glb assets/v12/canakkale_real_world_v12.glb
           python tools/fetch_v20_cc0_assets.py
           test -s assets/v20/ferry_remaster_v20.glb
@@ -58,7 +60,6 @@ jobs:
           test -s assets/v20/terrain/dry_grass_diff.png
           test -s assets/v20/terrain/dirt_diff.png
           test -s assets/v20/terrain/rock_diff.png
-          test -s assets/v20/lighting/harbour_day_2k.hdr
           test -s assets/v12/canakkale_real_world_v12.glb
           find assets/v20 -maxdepth 3 -type f -printf '%p %k KB\n' | sort
 
@@ -79,7 +80,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı v21 Mega Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı v22 Ultra Sim Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -115,24 +116,24 @@ jobs:
           set -o pipefail
           godot --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
           if grep -E "SCRIPT ERROR: Parse Error|Failed to load script|Shader compilation failed|ERROR:.*shader" /tmp/godot-import.log; then
-            echo "Godot v21 validation failed."
+            echo "Godot v22 validation failed."
             exit 1
           fi
 
-      - name: Export v21 APK
+      - name: Export v22 APK
         run: |
           set -o pipefail
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v21-mega.apk 2>&1 | tee /tmp/godot-export.log
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v22-ultra-sim.apk 2>&1 | tee /tmp/godot-export.log
           if grep -E "SCRIPT ERROR: Parse Error|Failed to load script|Shader compilation failed" /tmp/godot-export.log; then
             echo "Godot export contained script/shader errors."
             exit 1
           fi
-          test -s build/BogazKaptani-v21-mega.apk
-          ls -lh build/BogazKaptani-v21-mega.apk
+          test -s build/BogazKaptani-v22-ultra-sim.apk
+          ls -lh build/BogazKaptani-v22-ultra-sim.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v21-mega-apk
-          path: build/BogazKaptani-v21-mega.apk
+          name: BogazKaptani-v22-ultra-sim-apk
+          path: build/BogazKaptani-v22-ultra-sim.apk
           if-no-files-found: error

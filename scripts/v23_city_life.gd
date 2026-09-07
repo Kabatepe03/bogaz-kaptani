@@ -69,7 +69,7 @@ func _spawn_moving_stream(points: Array[Vector3], sea_target: Vector3, road_offs
 		Color(0.08,0.29,0.54), Color(0.17,0.18,0.17), Color(0.60,0.50,0.26)
 	]
 	for i: int in range(count):
-		var kind := "car"
+		var kind: String = "car"
 		if i % 9 == 0:
 			kind = "bus"
 		elif i % 6 == 0:
@@ -113,7 +113,7 @@ func _update_vehicle_pose(vehicle: Node3D, progress: float) -> void:
 	var points: Array[Vector3] = []
 	for item: Variant in raw_points:
 		if item is Vector3:
-			points.append(item as Vector3)
+			points.append(item)
 	if points.size() < 2:
 		return
 	var p: Vector3 = _polyline_sample(points, progress)

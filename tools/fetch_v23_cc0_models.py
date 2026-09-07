@@ -9,10 +9,12 @@ ROOT.mkdir(parents=True, exist_ok=True)
 BASE = "https://api.polyhaven.com/files/"
 UA = "BogazKaptani-DigitalTwin/23.0 (+https://github.com/Kabatepe03/bogaz-kaptani)"
 
+# These are used only for the near/mid foliage layer. The merged procedural forest remains the
+# kilometre-scale LOD, so spending 2K textures here improves close shots without duplicating every tree.
 ASSETS = {
-    "pine_tree_01": "1k",
-    "tree_small_02": "1k",
-    "island_tree_03": "1k",
+    "pine_tree_01": "2k",
+    "tree_small_02": "2k",
+    "island_tree_03": "2k",
 }
 
 
@@ -59,8 +61,6 @@ def choose(records, asset_id: str, resolution: str):
             gltf_records.append((1, path, record))
     if not gltf_records:
         raise RuntimeError(f"No {resolution} glTF package found for {asset_id}")
-    # Prefer a packaged ZIP because it preserves all dependent textures/bin files. Otherwise use
-    # the main glTF record and recursively download its include tree.
     gltf_records.sort(key=lambda item: item[0])
     return gltf_records[0][2]
 
@@ -120,14 +120,12 @@ def main():
             manifest[asset_id] = model_path.as_posix()
             print(asset_id, "->", model_path)
         except Exception as exc:
-            # The game has procedural foliage fallbacks, so an upstream CDN/API outage must not
-            # destroy the whole Android build. We still record the error prominently in the manifest.
             failures[asset_id] = str(exc)
             print(f"WARNING: {asset_id}: {exc}")
-    payload = {"models": manifest, "failures": failures, "license": "Poly Haven CC0"}
+    payload = {"models": manifest, "failures": failures, "license": "Poly Haven CC0", "near_resolution": "2k"}
     (ROOT / "MANIFEST.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     (ROOT / "ATTRIBUTION.txt").write_text(
-        "Boğaz Kaptanı v23 vegetation\nPoly Haven CC0 assets: pine_tree_01, tree_small_02, island_tree_03.\nhttps://polyhaven.com/\n",
+        "Boğaz Kaptanı v23 vegetation\nPoly Haven CC0 assets: pine_tree_01, tree_small_02, island_tree_03.\nNear foliage uses 2K packages.\nhttps://polyhaven.com/\n",
         encoding="utf-8",
     )
 

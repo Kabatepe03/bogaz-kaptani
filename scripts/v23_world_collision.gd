@@ -49,8 +49,6 @@ func _physics_process(delta: float) -> void:
 	if warning_label != null:
 		warning_label.visible = warning_timer > 0.0
 
-	# Route/restart buttons teleport the inherited controller between terminals. Never reuse the
-	# previous terminal's last-safe position after such a teleport; validate a fresh water spawn.
 	var teleport_distance: float = ferry.global_position.distance_to(previous_frame_position)
 	if teleport_distance > 180.0:
 		have_safe_pose = false
@@ -201,14 +199,17 @@ func _force_safe_spawn() -> void:
 	seaward.y = 0.0
 	seaward = seaward.normalized()
 
-	var selected := dock + seaward * 126.0 + Vector3.UP * 2.0
-	for offset in range(126, 341, 18):
-		var candidate := dock + seaward * float(offset) + Vector3.UP * 2.0
-		var basis := Basis.looking_at(seaward, Vector3.UP)
-		var candidate_transform := Transform3D(basis, candidate)
-		if _hull_collision_reason(candidate_transform).is_empty():
-			selected = candidate
-			break
+	var basis := Basis.looking_at(seaward, Vector3.UP)
+	var selected := dock + seaward * 64.0 + Vector3.UP * 2.0
+	var selected_transform := Transform3D(basis, selected)
+	if not _hull_collision_reason(selected_transform).is_empty():
+		for offset in range(72, 253, 10):
+			var candidate := dock + seaward * float(offset) + Vector3.UP * 2.0
+			var candidate_transform := Transform3D(basis, candidate)
+			if _hull_collision_reason(candidate_transform).is_empty():
+				selected = candidate
+				break
+
 	ferry.global_position = selected
 	ferry.look_at(selected + seaward * 100.0, Vector3.UP)
 	controller.set("route_start", selected)

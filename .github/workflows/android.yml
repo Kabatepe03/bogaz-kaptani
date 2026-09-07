@@ -43,9 +43,9 @@ jobs:
           test -s assets/v20/vehicles/minibus_remaster_v20.glb
           test -s assets/v20/vehicles/bus_remaster_v20.glb
           test -s assets/v20/vehicles/truck_remaster_v20.glb
-          test -s assets/v20/materials/asphalt_diff.jpg
-          test -s assets/v20/materials/concrete_diff.jpg
-          test -s assets/v20/materials/ramp_metal_diff.jpg
+          test -s assets/v20/materials/asphalt_diff.png
+          test -s assets/v20/materials/concrete_diff.png
+          test -s assets/v20/materials/ramp_metal_diff.png
           test -s assets/v20/lighting/harbour_day_2k.hdr
           test -s assets/v12/canakkale_real_world_v12.glb
           find assets/v20 -maxdepth 3 -type f -printf '%p %k KB\n' | sort

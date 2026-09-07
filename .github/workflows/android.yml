@@ -1,14 +1,14 @@
-name: Android v15 graphics leap APK
+name: Android v20 remaster APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "v15-graphics-leap" ]
+    branches: [ "v20-remaster" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       GODOT_VERSION: 4.4.1
       GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
@@ -27,21 +27,28 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Generate realistic ferry, vehicles and Çanakkale world
+      - name: Build v20 remaster asset pack
         run: |
+          set -euxo pipefail
           python -m pip install --upgrade pip
           pip install "numpy<3" "scipy>=1.14,<2" "trimesh>=4.4,<5" "pillow>=10,<12" "shapely>=2,<3" "mapbox-earcut>=1,<2"
           python tools/generate_v11_assets.py
           python tools/generate_v14_world.py
           python tools/generate_v15_assets.py
-          test -s assets/v11/sedan_pbr_v11.glb
-          test -s assets/v11/minibus_pbr_v11.glb
-          test -s assets/v11/bus_pbr_v11.glb
-          test -s assets/v11/truck_pbr_v11.glb
+          python tools/generate_v20_assets.py
+          python tools/generate_v20_vehicles.py
+          python tools/fetch_v20_cc0_assets.py
+          test -s assets/v20/ferry_remaster_v20.glb
+          test -s assets/v20/vehicles/sedan_remaster_v20.glb
+          test -s assets/v20/vehicles/minibus_remaster_v20.glb
+          test -s assets/v20/vehicles/bus_remaster_v20.glb
+          test -s assets/v20/vehicles/truck_remaster_v20.glb
+          test -s assets/v20/materials/asphalt_diff.jpg
+          test -s assets/v20/materials/concrete_diff.jpg
+          test -s assets/v20/materials/ramp_metal_diff.jpg
+          test -s assets/v20/lighting/harbour_day_2k.hdr
           test -s assets/v12/canakkale_real_world_v12.glb
-          test -s assets/v12/ATTRIBUTION.txt
-          test -s assets/v15/ferry_realistic_v15.glb
-          ls -lh assets/v11 assets/v12 assets/v15
+          find assets/v20 -maxdepth 3 -type f -printf '%p %k KB\n' | sort
 
       - uses: android-actions/setup-android@v3
 
@@ -60,7 +67,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı v15 Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı v20 Remaster Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -90,30 +97,30 @@ jobs:
           test -f "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
           java -version
           "$ANDROID_HOME/platform-tools/adb" version
-          keytool -list -keystore "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" -storepass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER"
 
-      - name: Import project and verify scripts
+      - name: Import project and verify scripts and shaders
         run: |
           set -o pipefail
           godot --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
-          if grep -E "SCRIPT ERROR: Parse Error|Failed to load script" /tmp/godot-import.log; then
-            echo "Godot script validation failed."
+          if grep -E "SCRIPT ERROR: Parse Error|Failed to load script|Shader compilation failed|ERROR:.*shader" /tmp/godot-import.log; then
+            echo "Godot remaster validation failed."
             exit 1
           fi
 
-      - name: Export APK
+      - name: Export v20 APK
         run: |
           set -o pipefail
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v15-graphics-leap.apk 2>&1 | tee /tmp/godot-export.log
-          if grep -E "SCRIPT ERROR: Parse Error|Failed to load script" /tmp/godot-export.log; then
-            echo "Godot export contained script errors."
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v20-remaster.apk 2>&1 | tee /tmp/godot-export.log
+          if grep -E "SCRIPT ERROR: Parse Error|Failed to load script|Shader compilation failed" /tmp/godot-export.log; then
+            echo "Godot export contained script/shader errors."
             exit 1
           fi
-          test -s build/BogazKaptani-v15-graphics-leap.apk
+          test -s build/BogazKaptani-v20-remaster.apk
+          ls -lh build/BogazKaptani-v20-remaster.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v15-graphics-leap-apk
-          path: build/BogazKaptani-v15-graphics-leap.apk
+          name: BogazKaptani-v20-remaster-apk
+          path: build/BogazKaptani-v20-remaster.apk
           if-no-files-found: error

@@ -15,10 +15,10 @@ func _install() -> void:
 		await get_tree().process_frame
 	if not FileAccess.file_exists(MANIFEST):
 		return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST))
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST))
 	if not (parsed is Dictionary):
 		return
-	var models: Dictionary = parsed.get("models", {})
+	var models: Dictionary = (parsed as Dictionary).get("models", {})
 	if models.is_empty():
 		return
 	var scene: Node = get_tree().current_scene
@@ -50,23 +50,23 @@ func _load_scene_from_manifest(models: Dictionary, key: String) -> PackedScene:
 	return resource as PackedScene if resource is PackedScene else null
 
 func _scatter_eceabat_hills(model: PackedScene, count: int) -> void:
-	var center := GeoReference.to_local(GeoReference.ECEABAT_DOCK)
-	var toward_canakkale := GeoReference.to_local(GeoReference.CANAKKALE_DOCK) - center
+	var center: Vector3 = GeoReference.to_local(GeoReference.ECEABAT_DOCK)
+	var toward_canakkale: Vector3 = GeoReference.to_local(GeoReference.CANAKKALE_DOCK) - center
 	toward_canakkale.y = 0.0
 	toward_canakkale = toward_canakkale.normalized()
-	var inland := -toward_canakkale
-	var lateral := Vector3(-inland.z, 0.0, inland.x)
+	var inland: Vector3 = -toward_canakkale
+	var lateral: Vector3 = Vector3(-inland.z, 0.0, inland.x)
 	var planted := 0
 	var attempts := 0
 	while planted < count and attempts < count * 9:
 		attempts += 1
-		var inland_distance := rng.randf_range(120.0, 1720.0)
-		var side_distance := rng.randf_range(-1320.0, 1320.0)
-		var p := center + inland * inland_distance + lateral * side_distance
-		var ground := _ground_point(p.x, p.z)
+		var inland_distance: float = rng.randf_range(120.0, 1720.0)
+		var side_distance: float = rng.randf_range(-1320.0, 1320.0)
+		var p: Vector3 = center + inland * inland_distance + lateral * side_distance
+		var ground: Variant = _ground_point(p.x, p.z)
 		if ground == null:
 			continue
-		var gp: Vector3 = ground
+		var gp: Vector3 = ground as Vector3
 		if gp.y < 2.0 or gp.y > 225.0:
 			continue
 		_spawn_model(model, gp, rng.randf_range(0.72, 1.28), rng.randf_range(0.0, TAU), 2850.0)
@@ -75,21 +75,21 @@ func _scatter_eceabat_hills(model: PackedScene, count: int) -> void:
 			await get_tree().process_frame
 
 func _scatter_eceabat_coast(model: PackedScene, count: int) -> void:
-	var center := GeoReference.to_local(GeoReference.ECEABAT_DOCK)
-	var toward_canakkale := GeoReference.to_local(GeoReference.CANAKKALE_DOCK) - center
+	var center: Vector3 = GeoReference.to_local(GeoReference.ECEABAT_DOCK)
+	var toward_canakkale: Vector3 = GeoReference.to_local(GeoReference.CANAKKALE_DOCK) - center
 	toward_canakkale.y = 0.0
 	toward_canakkale = toward_canakkale.normalized()
-	var inland := -toward_canakkale
-	var lateral := Vector3(-inland.z, 0.0, inland.x)
+	var inland: Vector3 = -toward_canakkale
+	var lateral: Vector3 = Vector3(-inland.z, 0.0, inland.x)
 	var planted := 0
 	var attempts := 0
 	while planted < count and attempts < count * 10:
 		attempts += 1
-		var p := center + inland * rng.randf_range(48.0, 680.0) + lateral * rng.randf_range(-1020.0, 1020.0)
-		var ground := _ground_point(p.x, p.z)
+		var p: Vector3 = center + inland * rng.randf_range(48.0, 680.0) + lateral * rng.randf_range(-1020.0, 1020.0)
+		var ground: Variant = _ground_point(p.x, p.z)
 		if ground == null:
 			continue
-		var gp: Vector3 = ground
+		var gp: Vector3 = ground as Vector3
 		if gp.y < 1.0 or gp.y > 90.0:
 			continue
 		_spawn_model(model, gp, rng.randf_range(0.65, 1.12), rng.randf_range(0.0, TAU), 2050.0)
@@ -98,16 +98,16 @@ func _scatter_eceabat_coast(model: PackedScene, count: int) -> void:
 			await get_tree().process_frame
 
 func _scatter_canakkale_green(model: PackedScene, count: int) -> void:
-	var center := GeoReference.to_local(Vector2(40.1520, 26.4055))
+	var center: Vector3 = GeoReference.to_local(Vector2(40.1520, 26.4055))
 	var planted := 0
 	var attempts := 0
 	while planted < count and attempts < count * 12:
 		attempts += 1
-		var p := center + Vector3(rng.randf_range(72.0, 1320.0), 0.0, rng.randf_range(-1280.0, 980.0))
-		var ground := _ground_point(p.x, p.z)
+		var p: Vector3 = center + Vector3(rng.randf_range(72.0, 1320.0), 0.0, rng.randf_range(-1280.0, 980.0))
+		var ground: Variant = _ground_point(p.x, p.z)
 		if ground == null:
 			continue
-		var gp: Vector3 = ground
+		var gp: Vector3 = ground as Vector3
 		if gp.y < 1.0 or gp.y > 125.0:
 			continue
 		_spawn_model(model, gp, rng.randf_range(0.70, 1.30), rng.randf_range(0.0, TAU), 1850.0)
@@ -115,11 +115,11 @@ func _scatter_canakkale_green(model: PackedScene, count: int) -> void:
 		if planted % 16 == 0:
 			await get_tree().process_frame
 
-func _ground_point(x: float, z: float):
+func _ground_point(x: float, z: float) -> Variant:
 	if get_viewport().world_3d == null:
 		return null
 	var state: PhysicsDirectSpaceState3D = get_viewport().world_3d.direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(Vector3(x, 320.0, z), Vector3(x, -12.0, z))
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(Vector3(x, 320.0, z), Vector3(x, -12.0, z))
 	query.collide_with_areas = false
 	query.collide_with_bodies = true
 	var hit: Dictionary = state.intersect_ray(query)
@@ -132,7 +132,7 @@ func _spawn_model(model: PackedScene, position: Vector3, scale_value: float, yaw
 	if not (node is Node3D):
 		node.queue_free()
 		return
-	var tree := node as Node3D
+	var tree: Node3D = node as Node3D
 	tree.global_position = position + Vector3.UP * 0.03
 	tree.rotation.y = yaw
 	tree.scale = Vector3.ONE * scale_value
@@ -141,7 +141,7 @@ func _spawn_model(model: PackedScene, position: Vector3, scale_value: float, yaw
 
 func _tune_visuals(node: Node, visibility_end: float) -> void:
 	if node is GeometryInstance3D:
-		var geometry := node as GeometryInstance3D
+		var geometry: GeometryInstance3D = node as GeometryInstance3D
 		geometry.visibility_range_end = visibility_end
 		geometry.visibility_range_end_margin = 180.0
 		geometry.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON

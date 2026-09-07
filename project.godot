@@ -12,6 +12,7 @@ V10Visuals="*res://scripts/v10_visuals.gd"
 V10ShipShell="*res://scripts/v10_ship_shell.gd"
 V12FerrySwap="*res://scripts/v12_ferry_swap.gd"
 V20Wake="*res://scripts/v20_wake.gd"
+V20WorldMaterials="*res://scripts/v20_world_materials.gd"
 
 [display]
 window/size/viewport_width=1920

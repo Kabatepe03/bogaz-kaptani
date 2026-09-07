@@ -1,6 +1,7 @@
 extends "res://scripts/v22_controller.gd"
 
 const GeoReferenceV23 = preload("res://scripts/geo_reference.gd")
+const V23WaterShader: Shader = preload("res://shaders/water_v23.gdshader")
 
 const CHANNEL_LL: Array[Vector2] = [
 	Vector2(40.2140, 26.4380),
@@ -24,8 +25,6 @@ func _process(delta: float) -> void:
 		_retitle_v23(self)
 
 func _update_ferry(delta: float) -> void:
-	# Keep the mature engine/rudder/twin-screw model, then replace the old radial current field
-	# with a current vector that follows the long axis of the Dardanelles.
 	super._update_ferry(delta)
 	_apply_channel_current_correction(delta)
 
@@ -42,14 +41,16 @@ func _validate_v23_spawn() -> void:
 func _install_v23() -> void:
 	for _frame: int in range(22):
 		await get_tree().process_frame
+	if v20_water_material != null:
+		v20_water_material.shader = V23WaterShader
+		v20_water_material.set_shader_parameter("sea_state", clampf(0.46 + wind_strength * 0.085, 0.46, 0.92))
+		v20_water_material.set_shader_parameter("wave_height", clampf(0.58 + wind_strength * 0.065, 0.58, 0.94))
 	_retitle_v23(self)
 	_validate_v23_spawn()
 
 func _apply_channel_current_correction(delta: float) -> void:
 	if ferry == null or delta <= 0.0:
 		return
-
-	# Remove the v12 radial-field approximation that has already been applied by super().
 	var c_dock: Vector3 = GeoReferenceV23.to_local(GeoReferenceV23.CANAKKALE_DOCK)
 	var e_dock: Vector3 = GeoReferenceV23.to_local(GeoReferenceV23.ECEABAT_DOCK)
 	var old_mid: Vector3 = (c_dock + e_dock) * 0.5
@@ -60,9 +61,6 @@ func _apply_channel_current_correction(delta: float) -> void:
 	var old_speed: float = (0.43 + 0.42 * old_central_factor) * weather_factor
 	var old_velocity: Vector3 = old_dir * old_speed
 
-	# Find the closest point and tangent on a geographic channel centreline. The polyline follows
-	# the strait north-to-south, so current direction bends with the real channel instead of always
-	# pointing toward one arbitrary compass vector.
 	var best_distance := INF
 	var best_direction := Vector3(0.0, 0.0, 1.0)
 	for i in range(CHANNEL_LL.size() - 1):
@@ -80,9 +78,6 @@ func _apply_channel_current_correction(delta: float) -> void:
 
 	var channel_factor: float = 1.0 - smoothstep(260.0, 1450.0, best_distance)
 	var desired_speed: float = lerpf(0.24, 0.88, channel_factor) * weather_factor
-
-	# Manoeuvring basins are sheltered compared with the central stream. Keep cross-current visible,
-	# but do not make final docking impossible.
 	var dock_distance: float = minf(ferry.global_position.distance_to(c_dock), ferry.global_position.distance_to(e_dock))
 	var harbour_relief: float = lerpf(0.48, 1.0, smoothstep(150.0, 650.0, dock_distance))
 	desired_speed *= harbour_relief
@@ -90,8 +85,6 @@ func _apply_channel_current_correction(delta: float) -> void:
 
 	ferry.global_position += (desired_velocity - old_velocity) * delta
 
-	# Ground-speed display must reflect the corrected vector. Reconstruct the through-water velocity
-	# plus wind and the new current, matching the inherited HUD semantics.
 	var forward: Vector3 = -ferry.global_transform.basis.z
 	var starboard: Vector3 = ferry.global_transform.basis.x
 	var through_water: Vector3 = forward * surge_mps + starboard * sway_mps
@@ -102,6 +95,12 @@ func _apply_channel_current_correction(delta: float) -> void:
 		drift_angle_deg = rad_to_deg(acos(clampf(through_water.normalized().dot(corrected_ground.normalized()), -1.0, 1.0)))
 	else:
 		drift_angle_deg = 0.0
+
+func _apply_weather() -> void:
+	super._apply_weather()
+	if v20_water_material != null:
+		v20_water_material.set_shader_parameter("sea_state", clampf(0.46 + wind_strength * 0.085, 0.46, 0.92))
+		v20_water_material.set_shader_parameter("wave_height", clampf(0.58 + wind_strength * 0.065, 0.58, 0.94))
 
 func _update_v13_assist() -> void:
 	super._update_v13_assist()

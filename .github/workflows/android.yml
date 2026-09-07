@@ -1,14 +1,14 @@
-name: Android v11 real assets physics APK
+name: Android v12 real world APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "v11-real-assets-physics" ]
+    branches: [ "v12-real-world" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       GODOT_VERSION: 4.4.1
       GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
@@ -27,17 +27,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Generate v11 glTF PBR assets
+      - name: Generate glTF PBR ship vehicles and real Çanakkale world
         run: |
           python -m pip install --upgrade pip
-          pip install "numpy<3" "trimesh>=4.4,<5"
+          pip install "numpy<3" "trimesh>=4.4,<5" "pillow>=10,<12" "shapely>=2,<3" "mapbox-earcut>=1,<2"
           python tools/generate_v11_assets.py
+          python tools/generate_v12_world.py
           test -s assets/v11/ferry_gestas_style_v11.glb
           test -s assets/v11/sedan_pbr_v11.glb
           test -s assets/v11/minibus_pbr_v11.glb
           test -s assets/v11/bus_pbr_v11.glb
           test -s assets/v11/truck_pbr_v11.glb
-          ls -lh assets/v11
+          test -s assets/v12/canakkale_real_world_v12.glb
+          test -s assets/v12/ATTRIBUTION.txt
+          ls -lh assets/v11 assets/v12
 
       - uses: android-actions/setup-android@v3
 
@@ -56,7 +59,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı v11 Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı v12 Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -94,11 +97,11 @@ jobs:
       - name: Export APK
         run: |
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v11-real-assets.apk
-          test -s build/BogazKaptani-v11-real-assets.apk
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v12-real-world.apk
+          test -s build/BogazKaptani-v12-real-world.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v11-real-assets-physics-apk
-          path: build/BogazKaptani-v11-real-assets.apk
+          name: BogazKaptani-v12-real-world-apk
+          path: build/BogazKaptani-v12-real-world.apk
           if-no-files-found: error

@@ -9,13 +9,16 @@ config/features=PackedStringArray("4.4", "Mobile")
 [autoload]
 V12FerrySwap="*res://scripts/v12_ferry_swap.gd"
 V20Wake="*res://scripts/v20_wake_ultra.gd"
+V20HullFoam="*res://scripts/v20_hull_foam.gd"
 V20WorldMaterials="*res://scripts/v20_world_materials.gd"
 V20Landmarks="*res://scripts/v20_landmarks.gd"
 V20EceabatFlag="*res://scripts/v20_eceabat_flag.gd"
 V20TerminalUltra="*res://scripts/v20_terminal_ultra.gd"
+V20Atmosphere="*res://scripts/v20_atmosphere.gd"
 V20RenderQuality="*res://scripts/v20_render_quality.gd"
 V20CameraWarmup="*res://scripts/v20_camera_warmup.gd"
 V20MarineTraffic="*res://scripts/v20_marine_traffic.gd"
+V20UIIdentity="*res://scripts/v20_ui_identity.gd"
 
 [display]
 window/size/viewport_width=1920

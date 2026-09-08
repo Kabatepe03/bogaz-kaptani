@@ -1,10 +1,10 @@
-name: Android v30 ultra realism APK
+name: Android v30.1 performance realism APK
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - v30-ultra-realism
+      - v30-1-performance-realism
 
 jobs:
   build:
@@ -28,12 +28,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Build V30 ultra-realism asset pack
+      - name: Build V30.1 optimized realism asset pack
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
           pip install "numpy<3" "scipy>=1.14,<2" "trimesh>=4.4,<5" "pillow>=10,<12" "shapely>=2,<3" "mapbox-earcut>=1,<2" "networkx>=3,<4"
-          python -m py_compile tools/generate_v30_world.py tools/generate_v30_vehicles.py tools/generate_v30_marine.py tools/fetch_v23_cc0_models.py
+          python -m py_compile tools/generate_v30_world.py tools/generate_v30_vehicles.py tools/generate_v30_marine.py
 
           python tools/generate_v11_assets.py
           python tools/generate_v15_assets.py
@@ -47,14 +47,15 @@ jobs:
           python tools/generate_v20_marine_assets.py
           python tools/generate_v30_marine.py
 
+          # Keep the dense OSM city + one combined Mediterranean forest pass. The old V22 pass
+          # duplicated another ~4.8k trees and ~3.9k shrubs and was the biggest phone GPU spike.
           python tools/generate_v20_world.py
           python tools/generate_v20_world_ultra.py
-          python tools/generate_v22_world_finish.py
           python tools/generate_v23_world_visuals.py
 
           rm -f assets/v30/BUILD_METRICS.json
           for attempt in 1 2 3; do
-            echo "V30 OSM detail attempt $attempt"
+            echo "V30.1 OSM detail attempt $attempt"
             python tools/generate_v30_world.py || true
             if test -s assets/v30/BUILD_METRICS.json; then
               break
@@ -66,17 +67,33 @@ jobs:
 
           cp assets/v20/canakkale_eceabat_remaster_v20.glb assets/v12/canakkale_real_world_v12.glb
           python tools/fetch_v20_cc0_assets.py
-          python tools/fetch_v23_cc0_models.py
+
+          # Poly Haven source textures are much larger than a phone needs. Keep the same licensed
+          # PBR material set but pre-size raster maps to 2K before Godot import to cut VRAM pressure.
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          changed = 0
+          for path in Path('assets/v20').rglob('*.png'):
+              try:
+                  with Image.open(path) as img:
+                      if max(img.size) <= 2048:
+                          continue
+                      ratio = 2048.0 / float(max(img.size))
+                      size = (max(1, int(img.width * ratio)), max(1, int(img.height * ratio)))
+                      resized = img.resize(size, Image.Resampling.LANCZOS)
+                      resized.save(path, optimize=True, compress_level=6)
+                      changed += 1
+                      print('downsized', path, img.size, '->', size)
+              except Exception as exc:
+                  print('texture resize skipped', path, exc)
+          print('PBR textures downsized:', changed)
+          PY
 
           python - <<'PY'
           import json
           import trimesh
-          from pathlib import Path
-
-          with open('assets/v23/vegetation/MANIFEST.json', encoding='utf-8') as f:
-              manifest = json.load(f)
-          assert len(manifest.get('models', {})) >= 1, manifest
-          assert 'pine_tree_01' not in manifest.get('models', {}), manifest
 
           with open('assets/v30/BUILD_METRICS.json', encoding='utf-8') as f:
               metrics = json.load(f)
@@ -89,9 +106,8 @@ jobs:
           assert 'V23_RampFrontVisual' in nodes, sorted(nodes)[:30]
           assert 'V23_RampRearVisual' in nodes, sorted(nodes)[:30]
 
-          print('V30 metrics:', metrics)
-          print('CC0 vegetation models:', manifest.get('models', {}))
-          print('V30 hinged ramps verified')
+          print('V30.1 metrics:', metrics)
+          print('V30.1 hinged ramps verified')
           PY
 
           test -s assets/v20/ferry_remaster_v20.glb
@@ -110,9 +126,8 @@ jobs:
           test -s assets/v20/terrain/dry_grass_diff.png
           test -s assets/v20/terrain/dirt_diff.png
           test -s assets/v20/terrain/rock_diff.png
-          test -s assets/v23/vegetation/MANIFEST.json
           test -s assets/v12/canakkale_real_world_v12.glb
-          find assets/v20 assets/v23 assets/v30 -maxdepth 4 -type f -printf '%p %k KB\n' | sort
+          find assets/v20 assets/v30 -maxdepth 4 -type f -printf '%p %k KB\n' | sort
 
       - uses: android-actions/setup-android@v3
 
@@ -131,7 +146,7 @@ jobs:
             -alias "$GODOT_ANDROID_KEYSTORE_DEBUG_USER" \
             -keypass "$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Boğaz Kaptanı V30 Ultra Realism Debug,O=Kabatepe03,C=TR"
+            -dname "CN=Boğaz Kaptanı V30.1 Performance Realism Debug,O=Kabatepe03,C=TR"
 
       - name: Configure Godot Android paths
         run: |
@@ -167,25 +182,25 @@ jobs:
           set -o pipefail
           godot --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
           if grep -E "SCRIPT ERROR: Parse Error|Failed to load script|Shader compilation failed|ERROR:.*shader" /tmp/godot-import.log; then
-            echo "Godot V30 validation failed."
+            echo "Godot V30.1 validation failed."
             exit 1
           fi
 
-      - name: Export V30 APK
+      - name: Export V30.1 APK
         run: |
           set -o pipefail
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v30-ultra-realism.apk 2>&1 | tee /tmp/godot-export.log
+          godot --headless --verbose --path . --export-debug Android build/BogazKaptani-v30-1-performance-realism.apk 2>&1 | tee /tmp/godot-export.log
           if grep -E "SCRIPT ERROR: Parse Error|Failed to load script|Shader compilation failed" /tmp/godot-export.log; then
-            echo "Godot V30 export contained script/shader errors."
+            echo "Godot V30.1 export contained script/shader errors."
             exit 1
           fi
-          test -s build/BogazKaptani-v30-ultra-realism.apk
-          ls -lh build/BogazKaptani-v30-ultra-realism.apk
-          sha256sum build/BogazKaptani-v30-ultra-realism.apk
+          test -s build/BogazKaptani-v30-1-performance-realism.apk
+          ls -lh build/BogazKaptani-v30-1-performance-realism.apk
+          sha256sum build/BogazKaptani-v30-1-performance-realism.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BogazKaptani-v30-ultra-realism-apk
-          path: build/BogazKaptani-v30-ultra-realism.apk
+          name: BogazKaptani-v30-1-performance-realism-apk
+          path: build/BogazKaptani-v30-1-performance-realism.apk
           if-no-files-found: error

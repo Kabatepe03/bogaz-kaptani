@@ -24,6 +24,7 @@ V23MarineCollision="*res://scripts/v23_marine_collision.gd"
 V23FerryRamps="*res://scripts/v23_ferry_ramps.gd"
 V30SceneCleanup="*res://scripts/v30_scene_cleanup.gd"
 V30MobilePerformance="*res://scripts/v30_mobile_performance.gd"
+V303StableRuntime="*res://scripts/v30_stable_runtime.gd"
 
 [display]
 window/size/viewport_width=1920
